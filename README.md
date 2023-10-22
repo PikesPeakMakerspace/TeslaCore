@@ -55,3 +55,11 @@ TODO: Figure this out for the app and document it here:
 ```
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
 ```
+
+Where to put this: Create database:
+
+```
+python
+from project import db, create_app, models
+db.create_all()
+```
