@@ -24,12 +24,15 @@
                                 >
                                     Home
                                 </a>
+                                {% if current_user.is_authenticated %}
                                 <a
                                     href="{{ url_for('main.profile') }}"
                                     class="navbar-item"
                                 >
                                     Profile
                                 </a>
+                                {% endif %} {% if not
+                                current_user.is_authenticated %}
                                 <a
                                     href="{{ url_for('auth.login') }}"
                                     class="navbar-item"
@@ -42,12 +45,15 @@
                                 >
                                     Sign Up
                                 </a>
+                                {% endif %} {% if current_user.is_authenticated
+                                %}
                                 <a
                                     href="{{ url_for('auth.logout') }}"
                                     class="navbar-item"
                                 >
                                     Logout
                                 </a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

@@ -63,3 +63,5 @@ python
 from project import db, create_app, models
 db.create_all()
 ```
+
+werkzeug==2.3.0 was installed as a url_decode function in flask was deprecated, latest version not available just yet. Consider updating when possible and/or dig further on this.
