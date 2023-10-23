@@ -1,6 +1,9 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+import sys
+
+
 
 # init SQLAlchemy so we can use it later in our models
 db = SQLAlchemy()
@@ -36,5 +39,13 @@ def create_app():
     # blueprint for non-auth parts of app
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
+
+    # API: blueprint for hello endpoint
+    from app.api.hello import hello as hello_blueprint
+    app.register_blueprint(hello_blueprint)
+
+    # API: blueprint for auth endpoint
+    from app.api.api_auth import api_auth as api_auth_blueprint
+    app.register_blueprint(api_auth_blueprint)
 
     return app
