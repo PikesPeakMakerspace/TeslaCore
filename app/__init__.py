@@ -1,51 +1,35 @@
+from datetime import timedelta
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-import sys
+from flask_jwt_extended import JWTManager
 
+app = Flask(__name__)
+ACCESS_EXPIRES = timedelta(hours=1)
+app.config["JWT_SECRET_KEY"] = "super-secret" # Change this!
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = ACCESS_EXPIRES
+jwt = JWTManager(app)
 
+# We are using an in memory database here as an example. Make sure to use a
+# database with persistent storage in production!
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy(app)
 
-# init SQLAlchemy so we can use it later in our models
-db = SQLAlchemy()
+from . import models
+with app.app_context():
+    db.create_all()
 
-def create_app():
-    app = Flask(__name__)
+# Callback function to check if a JWT exists in the database blocklist
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_payload: dict)-> bool:
+    jti = jwt_payload["jti"]
+    token = db.session.query(models.TokenBlocklist.id).filter_by(jti=jti).scalar()
+    return token is not None
 
-    # TODO: Replace this string with an environment variable
-    app.config['SECRET_KEY'] = 'todo-replace-this-with-an-environment-variable'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+# API: blueprint for auth endpoint
+from app.api.auth import auth as auth_blueprint
+app.register_blueprint(auth_blueprint)
 
-    db.init_app(app)
-
-    from . import models
-    with app.app_context():
-        db.create_all()
-
-    login_manager = LoginManager()
-    login_manager.login_view = 'auth.login'
-    login_manager.init_app(app)
-
-    from .models import User
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        # since the user_id is just the primary key of our user table, use it in the query for the user
-        return User.query.get(int(user_id))
-
-    # blueprint for auth routes in our app
-    from .auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint)
-
-    # blueprint for non-auth parts of app
-    from .main import main as main_blueprint
-    app.register_blueprint(main_blueprint)
-
-    # API: blueprint for hello endpoint
-    from app.api.hello import hello as hello_blueprint
-    app.register_blueprint(hello_blueprint)
-
-    # API: blueprint for auth endpoint
-    from app.api.api_auth import api_auth as api_auth_blueprint
-    app.register_blueprint(api_auth_blueprint)
-
-    return app
+# API: blueprint for health endpoint
+from app.api.health import health as health_blueprint
+app.register_blueprint(health_blueprint)
