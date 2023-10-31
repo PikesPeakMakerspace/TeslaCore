@@ -9,6 +9,7 @@ from flask import request
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt
 from flask_jwt_extended import jwt_required
+from flask_jwt_extended import current_user
 
 auth = Blueprint('api_auth', __name__)
 
@@ -23,7 +24,8 @@ def register():
         return jsonify(msg=f"username already in use"), 401
     
     # TODO: Better improve this so this doesn't get spammed with new users. Need captcha, email verification, etc.
-    new_user = User(username=username, password=password)
+    now = datetime.now(timezone.utc)
+    new_user = User(username=username, password=password, created_at=now)
     db.session.add(new_user)
     db.session.commit()
 
@@ -38,12 +40,21 @@ def login():
     if not user or not user.check_password(password):
       return jsonify(msg=f"wrong username or password"), 401
     
+    #generate token
     access_token = create_access_token(identity=user)
+
+    # update last login time
+    now = datetime.now(timezone.utc)
+    db.session.query(User).\
+    filter(User.username == username).\
+    update({'last_logged_in': now})
+    db.session.commit()
+
     return jsonify(access_token=access_token)
 
 # Endpoint for revoking the current users access token. Saved the unique
 # identifier (jti) for the JWT into our database.
-@app.route("/api/auth/logout", methods=["DELETE"])
+@app.route("/api/auth/logout", methods=["POST"])
 @jwt_required(verify_type=False)
 def modify_token():
     token = get_jwt()
@@ -57,5 +68,14 @@ def modify_token():
 # A blocklisted access token will not be able to access this any more
 @app.route("/api/auth/valid", methods=["GET"])
 @jwt_required()
-def protected():
+def valid():
     return jsonify(hello="world")
+
+@app.route("/api/auth/who-am-i", methods=["GET"])
+@jwt_required()
+def who_am_i():
+    # We can now access our sqlalchemy User object via `current_user`.
+    return jsonify(
+      id=current_user.id,
+      username=current_user.username,
+    )
