@@ -57,3 +57,6 @@ WARNING: This is a development server. Do not use it in a production deployment.
 ```
 
 werkzeug==2.3.0 was installed as a url_decode function in flask was deprecated, latest version not available just yet. Consider updating when possible and/or dig further on this.
+
+All about JWTs:
+https://flask-jwt-extended.readthedocs.io/_/downloads/en/stable/pdf/
