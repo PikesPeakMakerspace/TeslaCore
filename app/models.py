@@ -1,11 +1,25 @@
+import uuid
+import enum
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
-import uuid
+from sqlalchemy import Enum
+from sqlalchemy.sql import func
+
+class DeviceTypeEnum(enum.Enum):
+    # TODO: "machine" may be too generalized, make a new enum value for each unique configuration a tesla node needs to work through
+    machine = 1
+    door = 2
+
+class UserLevel(enum.Enum):
+    pre_auth = 1
+    user = 2
+    editor = 3
+    admin = 4
 
 def uuid_str():
     return str(uuid.uuid4())
 
-# TODO: Add when token was set to expire, for a future cleanup script
+# TODO: Add when token was set to expire, for a future cleanup script, this will get huge otherwise
 class TokenBlocklist(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     jti = db.Column(db.String(36), nullable=False, index=True)
@@ -19,6 +33,7 @@ class User(db.Model):
     _password = db.Column("password", db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
     last_logged_in = db.Column(db.DateTime, nullable=True)
+    enabled = db.Column(db.Boolean, default=False, nullable=False, server_default=func.now())
 
     @property
     def password(self):
@@ -30,3 +45,46 @@ class User(db.Model):
     
     def check_password(self, password):
         return check_password_hash(self._password, password)
+
+class AccessCard(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    uuid = db.Column(db.String(36), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+
+# TODO: Revisit relationships with ORM here, maybe not needed or auto-generated once I set relationship?
+class UserAccessCard(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    access_card_id = db.Column(db.String(36), nullable=False)
+    access_node_id = db.Column(db.String(36), nullable=False)
+class AccessNode(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    type = db.Column(Enum(DeviceTypeEnum))
+    name = db.Column(db.String(100), unique=True)
+    mac_address = db.Column(db.String(17), unique=True)
+    created_at = db.Column(db.DateTime, nullable=False)
+
+class Device(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    type = db.Column(Enum(DeviceTypeEnum))
+    name = db.Column(db.String(100), unique=True)
+    created_at = db.Column(db.DateTime, nullable=False)
+
+# TODO: Revisit relationships with ORM here, maybe not needed or auto-generated once I set relationship?
+class AccessNodeDevice(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    access_node_id = db.Column(db.String(36), nullable=False)
+    device_id = db.Column(db.String(36), nullable=False)
+
+class AccessNodeLog(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    user_id = db.Column(db.String(36), nullable=False)
+    access_card_id = db.Column(db.String(36), nullable=False)
+    access_node_id = db.Column(db.String(36), nullable=False)
+    device_id = db.Column(db.String(36), nullable=False)
+    success = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+    # request_id (Do requests have ids in general now?)
+    # response_id (Is this an enum or is there an id with this?)
+    # message?
+
+# TODO: don't forget user log (login, logout, disable/enable, etc.)
