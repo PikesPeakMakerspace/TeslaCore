@@ -20,9 +20,9 @@ db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
 
-from app import routes, models
-#with app.app_context():
-#    db.create_all()
+from app import models
+with app.app_context():
+    db.create_all()
 
 # Callback function to check if a JWT exists in the database blocklist
 @jwt.token_in_blocklist_loader

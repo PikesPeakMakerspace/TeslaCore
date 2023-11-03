@@ -27,8 +27,7 @@ def register():
         return jsonify(message="username already in use"), 401
     
     # TODO: Better improve this so this doesn't get spammed with new users. Need captcha, email verification, etc.
-    now = datetime.now(timezone.utc)
-    new_user = User(username=username, password=password, created_at=now)
+    new_user = User(username=username, password=password)
     db.session.add(new_user)
     db.session.commit()
 
