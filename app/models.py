@@ -54,8 +54,8 @@ class AccessCard(db.Model):
 # TODO: Revisit relationships with ORM here, maybe not needed or auto-generated once I set relationship?
 class UserAccessCard(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    access_card_id = db.Column(db.String(36), nullable=False)
-    access_node_id = db.Column(db.String(36), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    access_card_id = db.Column(db.String(36), db.ForeignKey('access_card.id'), nullable=False)
 class AccessNode(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     type = db.Column(Enum(DeviceTypeEnum))
@@ -69,18 +69,22 @@ class Device(db.Model):
     name = db.Column(db.String(100), unique=True)
     created_at = db.Column(db.DateTime, nullable=False)
 
-# TODO: Revisit relationships with ORM here, maybe not needed or auto-generated once I set relationship?
 class AccessNodeDevice(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    access_node_id = db.Column(db.String(36), nullable=False)
-    device_id = db.Column(db.String(36), nullable=False)
+    access_node_id = db.Column(db.String(36), db.ForeignKey('access_node.id'), nullable=False)
+    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
+
+class UserDevice(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
 
 class AccessNodeLog(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    user_id = db.Column(db.String(36), nullable=False)
-    access_card_id = db.Column(db.String(36), nullable=False)
-    access_node_id = db.Column(db.String(36), nullable=False)
-    device_id = db.Column(db.String(36), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    access_card_id = db.Column(db.String(36), db.ForeignKey('access_card.id'), nullable=False)
+    access_node_id = db.Column(db.String(36), db.ForeignKey('access_node.id'), nullable=False)
+    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
     success = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
     # request_id (Do requests have ids in general now?)

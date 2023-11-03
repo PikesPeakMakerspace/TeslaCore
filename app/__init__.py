@@ -3,6 +3,7 @@ from datetime import timedelta
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 # Set this to something different as environment variable!
@@ -17,9 +18,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
-from . import models
-with app.app_context():
-    db.create_all()
+migrate = Migrate(app, db)
+
+from app import routes, models
+#with app.app_context():
+#    db.create_all()
 
 # Callback function to check if a JWT exists in the database blocklist
 @jwt.token_in_blocklist_loader
