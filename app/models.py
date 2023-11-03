@@ -5,17 +5,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Enum
 from sqlalchemy.sql import func
 
-class DeviceTypeEnum(enum.Enum):
-    # TODO: "machine" may be too generalized, make a new enum value for each unique configuration a tesla node needs to work through
-    machine = 1
-    door = 2
-
-class UserLevel(enum.Enum):
-    pre_auth = 1
-    user = 2
-    editor = 3
-    admin = 4
-
 def uuid_str():
     return str(uuid.uuid4())
 
@@ -25,6 +14,12 @@ class TokenBlocklist(db.Model):
     jti = db.Column(db.String(36), nullable=False, index=True)
     type = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+
+class UserLevel(enum.Enum):
+    pre_auth = 1
+    user = 2
+    editor = 3
+    admin = 4
 
 # TODO: How do we want to handle first admin user? Perhaps first registration?
 class User(db.Model):
@@ -55,18 +50,34 @@ class UserAccessCard(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
     access_card_id = db.Column(db.String(36), db.ForeignKey('access_card.id'), nullable=False)
-class AccessNode(db.Model):
-    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    type = db.Column(Enum(DeviceTypeEnum))
-    name = db.Column(db.String(100), unique=True)
-    mac_address = db.Column(db.String(17), unique=True)
-    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+
+class DeviceTypeEnum(enum.Enum):
+    # TODO: "machine" may be too generalized, make a new enum value for each unique configuration a tesla node needs to work through
+    machine = 1
+    door = 2
 
 class Device(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    type = db.Column(Enum(DeviceTypeEnum))
+    type = db.Column(Enum(DeviceTypeEnum), nullable=False)
     name = db.Column(db.String(100), unique=True)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+
+class AccessNodeStatusEnum(enum.Enum):
+    offline = 1
+    available = 2
+    in_use = 3
+    error = 4
+    decommissioned = 5
+
+class AccessNode(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    type = db.Column(Enum(DeviceTypeEnum), nullable=False)
+    name = db.Column(db.String(100), unique=True)
+    mac_address = db.Column(db.String(17), unique=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    status = db.Column(Enum(AccessNodeStatusEnum), nullable=False, default=AccessNodeStatusEnum.offline)
+    last_accessed_user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=True)
+    last_accessed_at = db.Column(db.DateTime, nullable=True)
 
 class AccessNodeDevice(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
