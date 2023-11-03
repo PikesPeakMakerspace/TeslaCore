@@ -1,17 +1,18 @@
+import os
 from datetime import timedelta
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = "super-secret" # Change this!
+# Set this to something different as environment variable!
+app.config["JWT_SECRET_KEY"] = os.environ.get('TESLA_JWT_SECRET_KEY') or "so-help-me-god"
+
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
 
 jwt = JWTManager(app)
 
-# We are using an in memory database here as an example. Make sure to use a
-# database with persistent storage in production!
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)

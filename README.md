@@ -29,17 +29,24 @@ Activate the virtual environment/
 source auth/bin/activate
 ```
 
+Set system environment variables for the flask app in ~/.zshrc (or similar profile file)
+
+```
+export TESLA_JWT_SECRET_KEY="This is so secret people!"
+export FLASK_APP=app
+export FLASK_DEBUG=1
+```
+
+Either restart terminal or load in the latest variables from the profile:
+
+```
+source ~/.zshrc
+```
+
 Install the required packages.
 
 ```
 pip install -r requirements.txt
-```
-
-TEMPORARY: Set environment variables in terminal (TODO: move these and others not here yet to a .env file or profile soon)
-
-```
-export FLASK_APP=app
-export FLASK_DEBUG=1
 ```
 
 Run the app.
