@@ -51,7 +51,7 @@ def login():
     now = datetime.now(timezone.utc)
     db.session.query(User).\
     filter(User.username == username).\
-    update({'last_logged_in': now})
+    update({'last_logged_in_at': now})
     db.session.commit()
 
     return jsonify(access_token=access_token, refresh_token=refresh_token)

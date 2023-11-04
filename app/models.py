@@ -15,11 +15,12 @@ class TokenBlocklist(db.Model):
     type = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
-class UserLevel(enum.Enum):
-    pre_auth = 1
-    user = 2
-    editor = 3
-    admin = 4
+class UserLevel(str, enum.Enum):
+    UNVERIFIED = 'unverified'
+    USER = 'user'
+    EDITOR = 'editor'
+    ADMIN = 'admin'
+    PUBLIC_DISPLAY = 'public display'
 
 # TODO: How do we want to handle first admin user? Perhaps first registration?
 class User(db.Model):
@@ -27,7 +28,7 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True)
     _password = db.Column("password", db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
-    last_logged_in = db.Column(db.DateTime, nullable=True)
+    last_logged_in_at = db.Column(db.DateTime, nullable=True)
     enabled = db.Column(db.Boolean, default=False, nullable=False)
 
     @property
@@ -41,20 +42,31 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self._password, password)
 
+class AccessCardStatusEnum(str, enum.Enum):
+    FUNCTIONAL = 'functional'
+    LOST = 'lost'
+    STOLEN = 'stolen'
+    DECOMMISSIONED = 'decommissioned'
+
 class AccessCard(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     uuid = db.Column(db.String(36), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    status = db.Column(Enum(AccessCardStatusEnum), nullable=False, default=AccessCardStatusEnum.FUNCTIONAL)
+    last_updated_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    last_updated_by_user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
 
 class UserAccessCard(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
     access_card_id = db.Column(db.String(36), db.ForeignKey('access_card.id'), nullable=False)
+    assigned_at=db.Column(db.DateTime, nullable=False, server_default=func.now())
+    assigned_by_user_id=db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
 
-class DeviceTypeEnum(enum.Enum):
+class DeviceTypeEnum(str, enum.Enum):
     # TODO: "machine" may be too generalized, make a new enum value for each unique configuration a tesla node needs to work through
-    machine = 1
-    door = 2
+    MACHINE = 'machine'
+    DOOR = 'door'
 
 class Device(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
@@ -62,12 +74,19 @@ class Device(db.Model):
     name = db.Column(db.String(100), unique=True)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
-class AccessNodeStatusEnum(enum.Enum):
-    offline = 1
-    available = 2
-    in_use = 3
-    error = 4
-    decommissioned = 5
+class UserDevice(db.Model):
+    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
+    assigned_at=db.Column(db.DateTime, nullable=False, server_default=func.now())
+    assigned_by_user_id=db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+
+class AccessNodeStatusEnum(str, enum.Enum):
+    OFFLINE = 'offline'
+    AVAILABLE = 'available'
+    IN_USE = 'in use'
+    ERROR = 'error'
+    DECOMMISSIONED = 'decommissioned'
 
 class AccessNode(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
@@ -75,19 +94,14 @@ class AccessNode(db.Model):
     name = db.Column(db.String(100), unique=True)
     mac_address = db.Column(db.String(17), unique=True)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
-    status = db.Column(Enum(AccessNodeStatusEnum), nullable=False, default=AccessNodeStatusEnum.offline)
+    status = db.Column(Enum(AccessNodeStatusEnum), nullable=False, default=AccessNodeStatusEnum.OFFLINE)
     last_accessed_user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=True)
     last_accessed_at = db.Column(db.DateTime, nullable=True)
-
-class AccessNodeDevice(db.Model):
-    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    access_node_id = db.Column(db.String(36), db.ForeignKey('access_node.id'), nullable=False)
-    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
-
-class UserDevice(db.Model):
-    id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
-    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
-    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
+    # TODO: Discuss: I was going to assign to device via AccessNodeDevice join table, yet I think* nodes will only
+    # be assigned to one device at a time. We don't care to keep track when they are assigned or by who. If a device
+    # assignment changes, the node type may also need to change at the same time. May I keep here or should this be
+    # joined via a join table?
+    device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=True)
 
 class AccessNodeLog(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
@@ -97,8 +111,10 @@ class AccessNodeLog(db.Model):
     device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
     success = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
-    # request_id (Do requests have ids in general now?)
+    # request_id (Do requests have ids in general now? Is it relevant or will it help to log)
     # response_id (Is this an enum or is there an id with this?)
     # message?
 
 # TODO: don't forget user log (login, logout, disable/enable, etc.)
+# TODO: access card assignment log
+# TODO: machine assignment log

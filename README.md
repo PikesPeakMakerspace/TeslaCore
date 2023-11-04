@@ -70,3 +70,6 @@ https://flask-jwt-extended.readthedocs.io/_/downloads/en/stable/pdf/
 
 Database migration how-to with hints about referencing environment variables:
 https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-iv-database
+
+Nice tool if wanting to make edits to db directly:
+https://sqlitebrowser.org
