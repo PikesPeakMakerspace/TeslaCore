@@ -73,3 +73,9 @@ https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-iv-database
 
 Nice tool if wanting to make edits to db directly:
 https://sqlitebrowser.org
+
+Nice REST API guidelines:
+https://medium.com/paperplanetechworks/api-architecture-11-design-best-practices-for-rest-apis-d26a35be603c
+
+User role needs/protection for endpoints:
+https://pythonhosted.org/Flask-Principal/

@@ -1,9 +1,12 @@
 import os
 from datetime import timedelta
 from flask import Flask
+from flask import Response
+from flask import jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
+from json import dumps
 
 app = Flask(__name__)
 # Set this to something different as environment variable!
@@ -46,10 +49,25 @@ def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return models.User.query.filter_by(id=identity).one_or_none()
 
-# API: blueprint for auth endpoint
+#error handler to return JSON instead of HTML
+app.config['PROPAGATE_EXCEPTIONS'] = True
+@app.errorhandler(Exception)
+def all_exception_handler(error):
+    res = {
+        "code": error.code or 500,
+        "error": error.name or 'unknown',
+        "message": error.description or 'unknown',
+    }
+    return Response(status=error.code or 500, mimetype="application/json", response=dumps(res))
+
+# API: blueprint for auth endpoints
 from app.api.auth import auth as auth_blueprint
 app.register_blueprint(auth_blueprint)
 
 # API: blueprint for health endpoint
 from app.api.health import health as health_blueprint
 app.register_blueprint(health_blueprint)
+
+# API: blueprint for devices endpoint
+from app.api.devices import devices as devices_blueprint
+app.register_blueprint(devices_blueprint)

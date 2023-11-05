@@ -14,7 +14,7 @@ from flask_jwt_extended import jwt_required
 from flask_jwt_extended import current_user
 import jwt
 
-auth = Blueprint('api_auth', __name__)
+auth = Blueprint('auth', __name__)
 
 @app.route("/api/auth/register", methods=["PUT"])
 def register():
