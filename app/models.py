@@ -1,9 +1,10 @@
 import uuid
-import enum
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Enum
 from sqlalchemy.sql import func
+from .model_enums import UserRoleEnum, AccessCardStatusEnum, AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum
+
 
 def uuid_str():
     return str(uuid.uuid4())
@@ -15,19 +16,14 @@ class TokenBlocklist(db.Model):
     type = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
-class UserLevel(str, enum.Enum):
-    UNVERIFIED = 'unverified'
-    USER = 'user'
-    EDITOR = 'editor'
-    ADMIN = 'admin'
-    PUBLIC_DISPLAY = 'public display'
-
-# TODO: How do we want to handle first admin user? Perhaps first registration?
+# TODO: How do we want to handle first admin user? Perhaps first registration? (just no default 'admin' with 'admin' password please!)
 class User(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     username = db.Column(db.String(100), unique=True)
     _password = db.Column("password", db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    # TEMP: setting ADMIN by default for dev purposes, UNVERIFIED needs to be set once there's a method to verify etc.
+    role = db.Column(Enum(UserRoleEnum), nullable=False, default=UserRoleEnum.ADMIN)
     last_logged_in_at = db.Column(db.DateTime, nullable=True)
     enabled = db.Column(db.Boolean, default=False, nullable=False)
 
@@ -41,12 +37,6 @@ class User(db.Model):
     
     def check_password(self, password):
         return check_password_hash(self._password, password)
-
-class AccessCardStatusEnum(str, enum.Enum):
-    FUNCTIONAL = 'functional'
-    LOST = 'lost'
-    STOLEN = 'stolen'
-    DECOMMISSIONED = 'decommissioned'
 
 class AccessCard(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
@@ -63,14 +53,10 @@ class UserAccessCard(db.Model):
     assigned_at=db.Column(db.DateTime, nullable=False, server_default=func.now())
     assigned_by_user_id=db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
 
-class DeviceTypeEnum(str, enum.Enum):
-    # TODO: "machine" may be too generalized, make a new enum value for each unique configuration a tesla node needs to work through
-    MACHINE = 'machine'
-    DOOR = 'door'
-
 class Device(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)
     type = db.Column(Enum(DeviceTypeEnum), nullable=False)
+    status = db.Column(Enum(DeviceStatusEnum), nullable=False, default=DeviceStatusEnum.FUNCTIONAL)
     name = db.Column(db.String(100), unique=True)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
@@ -80,13 +66,6 @@ class UserDevice(db.Model):
     device_id = db.Column(db.String(36), db.ForeignKey('device.id'), nullable=False)
     assigned_at=db.Column(db.DateTime, nullable=False, server_default=func.now())
     assigned_by_user_id=db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
-
-class AccessNodeStatusEnum(str, enum.Enum):
-    OFFLINE = 'offline'
-    AVAILABLE = 'available'
-    IN_USE = 'in use'
-    ERROR = 'error'
-    DECOMMISSIONED = 'decommissioned'
 
 class AccessNode(db.Model):
     id = db.Column(db.String(36), primary_key=True, nullable=False, index=True, default=uuid_str)

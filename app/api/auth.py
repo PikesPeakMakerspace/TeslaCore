@@ -54,6 +54,10 @@ def login():
     update({'last_logged_in_at': now})
     db.session.commit()
 
+    # TEMP
+    # trigger flask_principal update active user role(s)
+    #identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
+
     return jsonify(access_token=access_token, refresh_token=refresh_token)
 
 

@@ -1,8 +1,9 @@
+# TODO: log errors to file
+
 import os
 from datetime import timedelta
 from flask import Flask
 from flask import Response
-from flask import jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
@@ -21,12 +22,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
+# TODO: no migrations happening yet, finish this
 migrate = Migrate(app, db)
 
+
+# TODO: TEMP: this is pre-migration: create a database based on models if no database exists
+# TEMP: delete database after model change to recreate (not ideal, enable those migrations soon)
 from app import models
 with app.app_context():
     db.create_all()
 
+# this is needed for defs like role_required() to work
+app.app_context().push()
+
+# TODO: This file getting bigger, can I break out jwt methods here?
 # Callback function to check if a JWT exists in the database blocklist
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload: dict)-> bool:
@@ -47,18 +56,46 @@ def user_identity_lookup(user):
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
-    return models.User.query.filter_by(id=identity).one_or_none()
+    user = models.User.query.filter_by(id=identity).one_or_none()
+    return user
 
-#error handler to return JSON instead of HTML
+# TODO: this file getting bigger, can I break out error handling methods here?
+# TODO: this smells kinda bad, maybe a better way to handle? (e.g. maybe don't want to return unknown error as str)
+#error handler to return JSON instead of HTML, work kin progress
 app.config['PROPAGATE_EXCEPTIONS'] = True
 @app.errorhandler(Exception)
 def all_exception_handler(error):
+    print('all_exception_handler error')
+    print(error)
+    
+    code = 500
+    name = 'unknown'
+    message = 'unknown'
+
+    if hasattr(error, 'code'):
+        code = error.code
+    if hasattr(error, 'error'):
+        name = error.error
+    if hasattr(error, 'message'):
+        message = error.message
+
+    def is_strable(x):
+        try:
+            str(x)
+            return True
+        except:
+            return False
+    
+    if message == 'unknown' and is_strable(error):
+        message = str(error)
+
     res = {
-        "code": error.code or 500,
-        "error": error.name or 'unknown',
-        "message": error.description or 'unknown',
+        "code": code,
+        "error": name,
+        "message": message,
     }
-    return Response(status=error.code or 500, mimetype="application/json", response=dumps(res))
+    return Response(status=code, mimetype="application/json", response=dumps(res))
+
 
 # API: blueprint for auth endpoints
 from app.api.auth import auth as auth_blueprint
