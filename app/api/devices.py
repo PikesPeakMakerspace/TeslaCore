@@ -1,10 +1,3 @@
-#TODO protect endpoints based on user roles
-#TODO filter by node
-#TODO filter by user access
-#TODO get one machine
-#TODO pagination
-#TODO sort
-
 from ..models import Device
 from ..model_enums import DeviceTypeEnum, UserRoleEnum, DeviceStatusEnum
 from .. import db
@@ -125,7 +118,7 @@ def read_devices():
 
     # filter by status
     if request.args.get('status'):
-        valid_status = request.args.get('status') in [e.value for e in DeviceTypeEnum]
+        valid_status = request.args.get('status') in [e.value for e in DeviceStatusEnum]
         if (valid_status):
             filters.append(Device.status == request.args.get('status'))
 
