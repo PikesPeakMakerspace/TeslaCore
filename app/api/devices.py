@@ -108,21 +108,21 @@ def read_devices():
         case 'status':
             order_by = Device.status
 
-    filters = []
+    query = Device.query
 
     # filter by device type
     if request.args.get('type'):
         valid_type = request.args.get('type') in [e.value for e in DeviceTypeEnum]
         if (valid_type):
-            filters.append(Device.type == request.args.get('type'))
+            #filters.append(Device.type == request.args.get('type'))
+            query = query.filter(Device.type == request.args.get('type'))
 
     # filter by status
     if request.args.get('status'):
         valid_status = request.args.get('status') in [e.value for e in DeviceStatusEnum]
         if (valid_status):
-            filters.append(Device.status == request.args.get('status'))
-
-    print(filters)
+            #filters.append(Device.status == request.args.get('status'))
+            query = query.filter(Device.status == request.args.get('status'))
 
     # TODO: filter by user assignment (with table join, once users have assignments to test)
 
@@ -142,11 +142,8 @@ def read_devices():
     max_per_page = 100
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
-    
-    # TODO how do I dynamically chain filters with filters array here instead of hard-coded like it is below? 
-    results = Device.query \
-        .filter(Device.type == DeviceTypeEnum.MACHINE) \
-        .filter(Device.status == DeviceStatusEnum.FUNCTIONAL) \
+
+    results = query \
         .order_by(order_by) \
         .paginate(page=page, per_page=per_page, max_per_page=max_per_page, error_out=False)
     
