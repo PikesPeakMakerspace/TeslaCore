@@ -3,6 +3,10 @@
 This is a small project being used to prototype a Python REST API for a larger volunteer project. I haven't used Python all that much, especially in a web server scenario. Let's fix that here.
 
 ## Setup
+in a linux terminal clone and enter the directory with the source code
+```
+cd TeslaCore
+```
 
 Install Python (if not already installed)
 
@@ -19,7 +23,6 @@ apt install python3.10-venv
 Initiate a virtual environment named `auth` (this takes a while to run).
 
 ```
-cd tesla-api
 python3 -m venv auth
 ```
 
@@ -40,6 +43,18 @@ Run the app.
 ```
 flask run
 ```
+
+## Repeated Setup
+Source the environment
+```
+source env.sh
+```
+
+Run the app
+```
+flask run
+```
+
 
 ## Random Notes
 
