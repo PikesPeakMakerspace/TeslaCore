@@ -37,10 +37,12 @@ jobs:
 #        pytest
     - name: test running app
       run: |
-        timeout 20 flask run | tee running_log.txt
-        grep -i "running" running_log.txt
+        timeout 15 flask run 2>&1 | tee running_log.txt
     - name: archive artifacts
       uses: actions/upload-artifact@v3
       with:
         name: run_log
         path: running_log.txt
+    - name: check if ran successfully
+      run: |
+        if grep -i "running" running_log.txt; then echo passed; exit 0; else echo failed; exit 1; fi
