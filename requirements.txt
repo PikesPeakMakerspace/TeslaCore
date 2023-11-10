@@ -3,3 +3,4 @@ flask_login
 flask-sqlalchemy
 werkzeug==2.3.0
 flask-migrate
+flask_jwt_extended
