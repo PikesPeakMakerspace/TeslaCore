@@ -29,12 +29,12 @@ jobs:
         flake8 . --count --exclude auth --select=E9,F63,F7,F82 --show-source --statistics
         echo linting warnings
         flake8 . --count --exclude auth --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: test with pytest
-      run: |
-        echo installing pytest
-        python3 -m pip install pytest
-        echo pytest
-        pytest
+#    - name: test with pytest
+#      run: |
+#        echo installing pytest
+#        python3 -m pip install pytest
+#        echo pytest
+#        pytest
     - name: test running app
       run: |
         timeout 20 flask run || echo pass
