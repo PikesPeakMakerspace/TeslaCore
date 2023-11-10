@@ -80,3 +80,6 @@ https://medium.com/paperplanetechworks/api-architecture-11-design-best-practices
 
 User role needs/protection for endpoints:
 https://pythonhosted.org/Flask-Principal/
+
+## Contribution Rules
+edits to markdown can happen directly in main, all other changes happen in feature branches
