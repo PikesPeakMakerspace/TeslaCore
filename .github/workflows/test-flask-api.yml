@@ -16,17 +16,24 @@ jobs:
         python-version: '3.10'
     - name: install dependencies
       run: |
+        echo installing python dependencies
         python3 -m pip install -r requirements.txt
+        echo setting up new venv auth
         python3 -m venv auth
         source env.sh
     - name: lint with flake8
       run: |
+        echo installing flake8 linter
         python3 -m pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        echo linting with forced fail pipeline for errors
+        flake8 . --count --exclude auth --select=E9,F63,F7,F82 --show-source --statistics
+        echo linting warnings
+        flake8 . --count --exclude auth --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: test with pytest
       run: |
+        echo installing pytest
         python3 -m pip install pytest
+        echo pytest
         pytest
     - name: test running app
       run: |
