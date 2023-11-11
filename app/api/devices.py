@@ -13,6 +13,7 @@ from sqlalchemy import exc
 devices = Blueprint('devices', __name__)
 
 
+# create a new device
 @app.route("/api/devices", methods=["POST"])
 @jwt_required()
 def create_device():
@@ -49,6 +50,7 @@ def create_device():
         abort(500, 'an unknown error occurred')
 
 
+# update a device
 @app.route("/api/devices/<deviceId>", methods=["PUT"])
 @jwt_required()
 def update_device(deviceId):
@@ -91,24 +93,36 @@ def update_device(deviceId):
         abort(500, 'an unknown error occurred')
 
 
-# TODO: Consider removing reference from other existing tables once those exist
+# TODO: Consider removing references from other tables once those exist
+# archive a device
 @app.route("/api/devices/<deviceId>", methods=["DELETE"])
 @jwt_required()
-def delete_device(deviceId):
+def archive_device(deviceId):
     role_required([UserRoleEnum.ADMIN])
 
     if (not deviceId):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
 
     try:
-        # delete
-        Device.query.filter(Device.id == deviceId).delete()
+        # find
+        device = Device.query.filter_by(id=deviceId).first()
+
+        if not device:
+            abort(404, 'unable to find a device with that id')
+
+        # archive device
+        device.status = DeviceStatusEnum.ARCHIVED
         db.session.commit()
-        return jsonify(message='device deleted')
+
+        # TODO: clear any node to device
+        # TODO: clear user assignments to device
+
+        return jsonify(message='device archived')
     except Exception:
         abort(500, 'an unknown error occurred')
 
 
+# return a list of devices
 @app.route("/api/devices", methods=["GET"])
 @jwt_required()
 def read_devices():
@@ -140,6 +154,10 @@ def read_devices():
             # filters.append(Device.status == request.args.get('status'))
             query = query.filter(Device.status == request.args.get('status'))
 
+    # hide archived if no status set
+    if not request.args.get('status'):
+        query = query.filter(Device.status != DeviceStatusEnum.ARCHIVED)
+
     # TODO: filter by user assignment (with table join, once users have
     # assignments to test)
 
@@ -150,7 +168,6 @@ def read_devices():
     # page
     page = 1
     if (request.args.get('page')):
-        # print(request.args.get('page'))
         page = int(request.args.get('page'))
         print(page)
 
@@ -182,6 +199,8 @@ def read_devices():
     return jsonify(devices=devices)
 
 
+# get a single device including full device information and associated data
+# useful for a UI detail page and related reporting
 @app.route("/api/devices/<deviceId>", methods=["GET"])
 @jwt_required()
 def read_device_view(deviceId):
