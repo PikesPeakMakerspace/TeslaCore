@@ -143,7 +143,6 @@ def read_devices():
         valid_type = request.args.get('type') \
             in [e.value for e in DeviceTypeEnum]
         if (valid_type):
-            # filters.append(Device.type == request.args.get('type'))
             query = query.filter(Device.type == request.args.get('type'))
 
     # filter by status
@@ -151,7 +150,6 @@ def read_devices():
         valid_status = request.args.get('status') \
             in [e.value for e in DeviceStatusEnum]
         if (valid_status):
-            # filters.append(Device.status == request.args.get('status'))
             query = query.filter(Device.status == request.args.get('status'))
 
     # hide archived if no status set
@@ -245,5 +243,29 @@ def read_device_view(deviceId):
         }
 
         return jsonify(view=view)
+    except Exception:
+        abort(500, 'an unknown error occurred')
+
+
+# get device-centric access logs
+# example: device could have had multiple nodes assigned at different times,
+# yet people care about how many people use the device, not the node (unless
+# curious about the node itself specifically, see access node endpoints)
+@app.route("/api/devices/<deviceId>/logs", methods=["GET"])
+@jwt_required()
+def read_device_logs(deviceId):
+    if (not deviceId):
+        abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
+
+    try:
+        # find
+        device = Device.query.filter_by(id=deviceId).first()
+
+        if not device:
+            abort(404, 'unable to find a device with that id')
+
+        # TODO: finish this one after node responses are known
+
+        return jsonify(logs='TODO')
     except Exception:
         abort(500, 'an unknown error occurred')
