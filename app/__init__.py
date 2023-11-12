@@ -105,6 +105,10 @@ app.register_blueprint(auth_blueprint)
 from app.api.health import health as health_blueprint
 app.register_blueprint(health_blueprint)
 
-# API: blueprint for devices endpoint
+# API: blueprint for device endpoints
 from app.api.devices import devices as devices_blueprint
 app.register_blueprint(devices_blueprint)
+
+# API: blueprint for access node endpoints
+from app.api.access_nodes import access_nodes as access_nodes_blueprint
+app.register_blueprint(access_nodes_blueprint)

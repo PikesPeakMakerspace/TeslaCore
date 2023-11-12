@@ -16,6 +16,7 @@ import jwt
 
 auth = Blueprint('auth', __name__)
 
+
 @app.route("/api/auth/register", methods=["PUT"])
 def register():
     username = request.json.get("username", None)
@@ -26,7 +27,8 @@ def register():
     if user:
         return jsonify(message="username already in use"), 401
     
-    # TODO: Better improve this so this doesn't get spammed with new users. Need captcha, email verification, etc.
+    # TODO: Better improve this so this doesn't get spammed with new users.
+    # Need captcha, email verification, etc.
     new_user = User(username=username, password=password)
     db.session.add(new_user)
     db.session.commit()
@@ -41,22 +43,18 @@ def login():
 
     user = User.query.filter_by(username=username).one_or_none()
     if not user or not user.check_password(password):
-      return jsonify(message="wrong username or password"), 401
-    
-    #generate token
+        return jsonify(message="wrong username or password"), 401
+
+    # generate token
     access_token = create_access_token(identity=user)
     refresh_token = create_refresh_token(identity=user)
 
     # update last login time
     now = datetime.now(timezone.utc)
     db.session.query(User).\
-    filter(User.username == username).\
-    update({'last_logged_in_at': now})
+        filter(User.username == username).\
+        update({'last_logged_in_at': now})
     db.session.commit()
-
-    # TEMP
-    # trigger flask_principal update active user role(s)
-    #identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
 
     return jsonify(access_token=access_token, refresh_token=refresh_token)
 
@@ -88,20 +86,28 @@ def modify_token():
     # refresh token in POST body
     refreshTokenJwt = request.json.get("refresh_token", None)
     if refreshTokenJwt:
-        refreshTokenDecoded = jwt.decode(refreshTokenJwt, options={"verify_signature": False})
+        refreshTokenDecoded = jwt.decode(
+            refreshTokenJwt,
+            options={"verify_signature": False}
+        )
         refreshTokenType = refreshTokenDecoded['type']
         refreshTokenJti = refreshTokenDecoded['jti']
-        db.session.add(TokenBlocklist(jti=refreshTokenJti, type=refreshTokenType, created_at=now))
+        db.session.add(TokenBlocklist(
+            jti=refreshTokenJti,
+            type=refreshTokenType,
+            created_at=now)
+        )
         db.session.commit()
 
     return jsonify(message="goodbye")
-    
+
 
 # A blocklisted access token will not be able to access this any more
 @app.route("/api/auth/valid", methods=["GET"])
 @jwt_required()
 def valid():
     return jsonify(message="valid")
+
 
 @app.route("/api/auth/who-am-i", methods=["GET"])
 @jwt_required()
