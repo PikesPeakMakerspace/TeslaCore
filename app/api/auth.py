@@ -17,7 +17,7 @@ import jwt
 auth = Blueprint('auth', __name__)
 
 
-@app.route("/api/auth/register", methods=["PUT"])
+@app.route("/api/auth/register", methods=["POST"])
 def register():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
