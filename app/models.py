@@ -4,7 +4,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Enum
 from sqlalchemy.sql import func
 from .model_enums import UserRoleEnum, AccessCardStatusEnum, \
-    AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum
+    AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum, \
+    AccessCardEmergeAccessLevelEnum
 
 
 def uuid_str():
@@ -50,6 +51,12 @@ class User(db.Model):
     username = db.Column(
         db.String(100),
         unique=True
+    )
+    first_name = db.Column(
+        db.String(100),
+    )
+    last_name = db.Column(
+        db.String(100),
     )
     _password = db.Column(
         "password",
@@ -98,9 +105,24 @@ class AccessCard(db.Model):
         index=True,
         default=uuid_str
     )
-    uuid = db.Column(
-        db.String(36),
+    card_number = db.Column(
+        db.Integer,
         nullable=False
+    )
+    emerge_facility_code = db.Column(
+        db.Integer,
+        nullable=False,
+        default=46
+    )
+    emerge_card_type = db.Column(
+        db.Integer,
+        nullable=False,
+        default=46
+    )
+    emerge_access_level = db.Column(
+        Enum(AccessCardEmergeAccessLevelEnum),
+        nullable=False,
+        default=AccessCardEmergeAccessLevelEnum.NEW_MEMBER
     )
     created_at = db.Column(
         db.DateTime,
@@ -110,7 +132,7 @@ class AccessCard(db.Model):
     status = db.Column(
         Enum(AccessCardStatusEnum),
         nullable=False,
-        default=AccessCardStatusEnum.FUNCTIONAL
+        default=AccessCardStatusEnum.ACTIVE
     )
     last_updated_at = db.Column(
         db.DateTime,
@@ -120,6 +142,24 @@ class AccessCard(db.Model):
     last_updated_by_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
+        nullable=False
+    )
+
+
+class EmergeAccessCardStatusCodeLookup(db.Model):
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        nullable=False,
+        index=True,
+        default=uuid_str
+    )
+    status = db.Column(
+        Enum(AccessCardStatusEnum),
+        nullable=False
+    )
+    emerge_status_code = db.Column(
+        db.Integer,
         nullable=False
     )
 

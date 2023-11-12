@@ -1,3 +1,10 @@
+## v1.3.0
+
+2023-12-09
+
+-   revise data model to accommodate access card system requirements
+-   add access card endpoints
+
 ## v1.2.0
 
 2023-11-09
