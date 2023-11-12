@@ -230,7 +230,8 @@ class AccessNode(db.Model):
     )
     mac_address = db.Column(
         db.String(17),
-        unique=True
+        unique=True,
+        nullable=False,
     )
     created_at = db.Column(
         db.DateTime,
