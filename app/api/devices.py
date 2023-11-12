@@ -42,7 +42,8 @@ def create_device():
             id=device.id,
             name=device.name,
             type=device.type,
-            created_at=device.created_at.isoformat()
+            status=device.status,
+            createdAt=device.created_at.isoformat()
         )
     except exc.IntegrityError:
         abort(409, 'a device with that name already exists')
@@ -51,15 +52,15 @@ def create_device():
 
 
 # update a device
-@app.route("/api/devices/<deviceId>", methods=["PUT"])
+@app.route("/api/devices/<device_id>", methods=["PUT"])
 @jwt_required()
-def update_device(deviceId):
+def update_device(device_id):
     role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
 
     type = request.json.get("type", None).strip()
     name = request.json.get("name", None).strip()
 
-    if (not deviceId):
+    if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
 
     if (not type or not name):
@@ -71,7 +72,7 @@ def update_device(deviceId):
 
     try:
         # find
-        device = Device.query.filter_by(id=deviceId).first()
+        device = Device.query.filter_by(id=device_id).first()
 
         if not device:
             abort(404, 'unable to find a device with that id')
@@ -87,7 +88,7 @@ def update_device(deviceId):
             id=device.id,
             name=device.name,
             type=device.type,
-            created_at=device.created_at.isoformat()
+            createdAt=device.created_at.isoformat()
         )
     except Exception:
         abort(500, 'an unknown error occurred')
@@ -95,17 +96,17 @@ def update_device(deviceId):
 
 # TODO: Consider removing references from other tables once those exist
 # archive a device
-@app.route("/api/devices/<deviceId>", methods=["DELETE"])
+@app.route("/api/devices/<device_id>", methods=["DELETE"])
 @jwt_required()
-def archive_device(deviceId):
+def archive_device(device_id):
     role_required([UserRoleEnum.ADMIN])
 
-    if (not deviceId):
+    if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
 
     try:
         # find
-        device = Device.query.filter_by(id=deviceId).first()
+        device = Device.query.filter_by(id=device_id).first()
 
         if not device:
             abort(404, 'unable to find a device with that id')
@@ -199,15 +200,15 @@ def read_devices():
 
 # get a single device including full device information and associated data
 # useful for a UI detail page and related reporting
-@app.route("/api/devices/<deviceId>", methods=["GET"])
+@app.route("/api/devices/<device_id>", methods=["GET"])
 @jwt_required()
-def read_device_view(deviceId):
-    if (not deviceId):
+def read_device_view(device_id):
+    if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
 
     try:
         # find
-        device = Device.query.filter_by(id=deviceId).first()
+        device = Device.query.filter_by(id=device_id).first()
 
         if not device:
             abort(404, 'unable to find a device with that id')
@@ -218,8 +219,6 @@ def read_device_view(deviceId):
             'type': device.type,
             'createdAt': device.created_at.isoformat(),
             'status': device.status,
-            'upTime': 'soon',
-            'lastPinged': 'soon',
             'accessNode': {
                 'id': 'soon',
                 'more': 'soon'
@@ -251,15 +250,15 @@ def read_device_view(deviceId):
 # example: device could have had multiple nodes assigned at different times,
 # yet people care about how many people use the device, not the node (unless
 # curious about the node itself specifically, see access node endpoints)
-@app.route("/api/devices/<deviceId>/logs", methods=["GET"])
+@app.route("/api/devices/<device_id>/logs", methods=["GET"])
 @jwt_required()
-def read_device_logs(deviceId):
-    if (not deviceId):
+def read_device_logs(device_id):
+    if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
 
     try:
         # find
-        device = Device.query.filter_by(id=deviceId).first()
+        device = Device.query.filter_by(id=device_id).first()
 
         if not device:
             abort(404, 'unable to find a device with that id')
