@@ -20,7 +20,7 @@ class AccessCardStatusEnum(str, enum.Enum):
     ARCHIVED = 'archived'
 
 
-class AccessCardEmergeAccessLevelEnum(str, enum.Enum):
+class UserEmergeAccessLevelEnum(str, enum.Enum):
     NEW_MEMBER = 'new member'
     FULL_DAY_ACCESS = 'full day access'
     ADMIN = 'admin'
