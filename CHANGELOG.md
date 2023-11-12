@@ -1,3 +1,9 @@
+## v1.2.0
+
+2023-11-09
+
+-   add access node endpoints
+
 ## v1.1.0
 
 2023-11-09

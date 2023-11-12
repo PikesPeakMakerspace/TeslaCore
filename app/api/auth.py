@@ -26,7 +26,7 @@ def register():
     user = User.query.filter_by(username=username).first()
     if user:
         return jsonify(message="username already in use"), 401
-    
+
     # TODO: Better improve this so this doesn't get spammed with new users.
     # Need captcha, email verification, etc.
     new_user = User(username=username, password=password)
