@@ -114,12 +114,12 @@ class AccessCard(db.Model):
         db.Integer,
         nullable=False
     )
-    emerge_facility_code = db.Column(
+    facility_code = db.Column(
         db.Integer,
         nullable=False,
         default=46
     )
-    emerge_card_type = db.Column(
+    card_type = db.Column(
         db.Integer,
         nullable=False,
         default=46

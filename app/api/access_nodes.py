@@ -40,26 +40,26 @@ def create_access_node():
 
     try:
         # create
-        accessNode = AccessNode(
+        access_node = AccessNode(
             type=type,
             name=name,
             mac_address=mac_address,
             device_id=device_id
         )
-        db.session.add(accessNode)
+        db.session.add(access_node)
         db.session.commit()
 
         # get full data
-        db.session.refresh(accessNode)
+        db.session.refresh(access_node)
 
         return jsonify(
-            id=accessNode.id,
-            name=accessNode.name,
-            type=accessNode.type,
-            macAddress=accessNode.mac_address,
-            status=accessNode.status,
-            deviceId=accessNode.device_id,
-            createdAt=accessNode.created_at.isoformat()
+            id=access_node.id,
+            name=access_node.name,
+            type=access_node.type,
+            macAddress=access_node.mac_address,
+            status=access_node.status,
+            deviceId=access_node.device_id,
+            createdAt=access_node.created_at.isoformat()
         )
     except exc.IntegrityError:
         abort(409, 'an access node with that name already exists')
