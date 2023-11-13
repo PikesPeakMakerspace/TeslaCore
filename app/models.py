@@ -4,7 +4,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Enum
 from sqlalchemy.sql import func
 from .model_enums import UserRoleEnum, AccessCardStatusEnum, \
-    AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum
+    AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum, \
+    UserEmergeAccessLevelEnum
 
 
 def uuid_str():
@@ -50,6 +51,17 @@ class User(db.Model):
     username = db.Column(
         db.String(100),
         unique=True
+    )
+    first_name = db.Column(
+        db.String(100),
+    )
+    last_name = db.Column(
+        db.String(100),
+    )
+    emerge_access_level = db.Column(
+        Enum(UserEmergeAccessLevelEnum),
+        nullable=False,
+        default=UserEmergeAccessLevelEnum.NEW_MEMBER
     )
     _password = db.Column(
         "password",
@@ -98,19 +110,24 @@ class AccessCard(db.Model):
         index=True,
         default=uuid_str
     )
-    uuid = db.Column(
-        db.String(36),
+    card_number = db.Column(
+        db.Integer,
         nullable=False
     )
-    created_at = db.Column(
-        db.DateTime,
+    facility_code = db.Column(
+        db.Integer,
         nullable=False,
-        server_default=func.now()
+        default=46
+    )
+    card_type = db.Column(
+        db.Integer,
+        nullable=False,
+        default=46
     )
     status = db.Column(
         Enum(AccessCardStatusEnum),
         nullable=False,
-        default=AccessCardStatusEnum.FUNCTIONAL
+        default=AccessCardStatusEnum.ACTIVE
     )
     last_updated_at = db.Column(
         db.DateTime,
@@ -120,6 +137,29 @@ class AccessCard(db.Model):
     last_updated_by_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
+        nullable=False
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+
+
+class EmergeAccessCardStatusCodeLookup(db.Model):
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        nullable=False,
+        index=True,
+        default=uuid_str
+    )
+    status = db.Column(
+        Enum(AccessCardStatusEnum),
+        nullable=False
+    )
+    emerge_status_code = db.Column(
+        db.Integer,
         nullable=False
     )
 
@@ -132,7 +172,7 @@ class UserAccessCard(db.Model):
         index=True,
         default=uuid_str
     )
-    user_id = db.Column(
+    assigned_to_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
         nullable=False
@@ -142,15 +182,51 @@ class UserAccessCard(db.Model):
         db.ForeignKey('access_card.id'),
         nullable=False
     )
-    assigned_at = db.Column(
-        db.DateTime,
-        nullable=False,
-        server_default=func.now()
-    )
     assigned_by_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
         nullable=False
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+
+
+class AccessCardLog(db.Model):
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        nullable=False,
+        index=True,
+        default=uuid_str
+    )
+    access_card_id = db.Column(
+        db.String(36),
+        db.ForeignKey('access_card.id'),
+        nullable=False
+    )
+    assigned_to_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id')
+    )
+    assigned_by_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        nullable=False,
+    )
+    status = db.Column(
+        Enum(AccessCardStatusEnum),
+        nullable=False
+    )
+    emerge_access_level = db.Column(
+        Enum(UserEmergeAccessLevelEnum),
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
     )
 
 
@@ -252,11 +328,6 @@ class AccessNode(db.Model):
         db.DateTime,
         nullable=True
     )
-    # TODO: Discuss: I was going to assign to device via AccessNodeDevice join
-    # table, yet I think* nodes will only be assigned to one device at a time.
-    # We don't care to keep track when they are assigned or by who. If a device
-    # assignment changes, the node type may also need to change at the same
-    # time. May I keep here or should this be joined via a join table?
     device_id = db.Column(
         db.String(36),
         db.ForeignKey('device.id'),
@@ -309,5 +380,4 @@ class AccessNodeLog(db.Model):
     # this?) message?
 
 # TODO: don't forget user log (login, logout, disable/enable, etc.)
-# TODO: access card assignment log
 # TODO: machine assignment log

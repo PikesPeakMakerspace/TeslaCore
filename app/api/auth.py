@@ -17,7 +17,7 @@ import jwt
 auth = Blueprint('auth', __name__)
 
 
-@app.route("/api/auth/register", methods=["PUT"])
+@app.route("/api/auth/register", methods=["POST"])
 def register():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
@@ -26,7 +26,7 @@ def register():
     user = User.query.filter_by(username=username).first()
     if user:
         return jsonify(message="username already in use"), 401
-    
+
     # TODO: Better improve this so this doesn't get spammed with new users.
     # Need captcha, email verification, etc.
     new_user = User(username=username, password=password)
