@@ -14,10 +14,16 @@ class UserRoleEnum(str, enum.Enum):
 
 
 class AccessCardStatusEnum(str, enum.Enum):
-    FUNCTIONAL = 'functional'
+    ACTIVE = 'active'
     LOST = 'lost'
     STOLEN = 'stolen'
     ARCHIVED = 'archived'
+
+
+class UserEmergeAccessLevelEnum(str, enum.Enum):
+    NEW_MEMBER = 'new member'
+    FULL_DAY_ACCESS = 'full day access'
+    ADMIN = 'admin'
 
 
 class AccessNodeStatusEnum(str, enum.Enum):
