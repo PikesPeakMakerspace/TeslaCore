@@ -21,6 +21,7 @@ def create_device():
 
     type = request.json.get("type", None).strip()
     name = request.json.get("name", None).strip()
+    status = request.json.get("status", None).strip()
 
     if (not type or not name):
         abort(422, 'missing type or name')
@@ -29,9 +30,17 @@ def create_device():
     if (not valid_type):
         abort(422, 'invalid type')
 
+    # validate optional status parameter
+    if (status):
+        valid_status = status in [e.value for e in DeviceStatusEnum]
+        if (not valid_status):
+            abort(422, 'invalid status')
+
     try:
         # create
         device = Device(type=type, name=name)
+        if (status):
+            device.status = status
         db.session.add(device)
         db.session.commit()
 
@@ -59,6 +68,7 @@ def update_device(device_id):
 
     type = request.json.get("type", None).strip()
     name = request.json.get("name", None).strip()
+    status = request.json.get("status", None).strip()
 
     if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
@@ -70,6 +80,12 @@ def update_device(device_id):
     if (not valid_type):
         abort(422, 'invalid type')
 
+    # validate optional status parameter
+    if (status):
+        valid_status = status in [e.value for e in DeviceStatusEnum]
+        if (not valid_status):
+            abort(422, 'invalid status')
+
     try:
         # find
         device = Device.query.filter_by(id=device_id).first()
@@ -80,6 +96,7 @@ def update_device(device_id):
         # update
         device.type = type
         device.name = name
+        device.status = status
         db.session.commit()
 
         # return the latest data in database

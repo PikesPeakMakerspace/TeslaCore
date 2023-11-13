@@ -42,7 +42,7 @@ class DeviceTypeEnum(str, enum.Enum):
 
 
 class DeviceStatusEnum(str, enum.Enum):
-    FUNCTIONAL = 'functional'
+    AVAILABLE = 'available'
     OUT_OF_ORDER = 'out of order'
     OFFLINE = 'offline'
     LOST = 'lost'
