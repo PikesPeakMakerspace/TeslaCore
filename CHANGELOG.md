@@ -1,3 +1,9 @@
+## v1.4.0
+
+2023-12-09
+
+-   set device status with create and edit
+
 ## v1.3.0
 
 2023-12-09
