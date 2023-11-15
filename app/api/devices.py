@@ -9,6 +9,7 @@ from flask import request
 from flask import abort
 from flask_jwt_extended import jwt_required
 from sqlalchemy import exc
+from werkzeug import exceptions
 
 devices = Blueprint('devices', __name__)
 
@@ -90,7 +91,7 @@ def update_device(device_id):
         # find
         device = Device.query.filter_by(id=device_id).first()
 
-        if not device:
+        if device is None:
             abort(404, 'unable to find a device with that id')
 
         # update
@@ -107,6 +108,8 @@ def update_device(device_id):
             type=device.type,
             createdAt=device.created_at.isoformat()
         )
+    except exceptions.NotFound:
+        abort(404, 'unable to find a device with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -136,6 +139,8 @@ def archive_device(device_id):
         # TODO: clear user assignments to device
 
         return jsonify(message='device archived')
+    except exceptions.NotFound:
+        abort(404, 'unable to find a device with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 

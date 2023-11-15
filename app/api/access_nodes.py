@@ -9,6 +9,7 @@ from flask import request
 from flask import abort
 from flask_jwt_extended import jwt_required
 from sqlalchemy import exc
+from werkzeug import exceptions
 
 access_nodes = Blueprint('access_nodes', __name__)
 
@@ -120,6 +121,8 @@ def update_access_node(access_node_id):
             status=access_node.status,
             createdAt=access_node.created_at.isoformat()
         )
+    except exceptions.NotFound:
+        abort(404, 'unable to find an access node with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -148,6 +151,8 @@ def archive_access_node(access_node_id):
         # TODO: clear any device assignments to node
 
         return jsonify(message='access node archived')
+    except exceptions.NotFound:
+        abort(404, 'unable to find an access node with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 
