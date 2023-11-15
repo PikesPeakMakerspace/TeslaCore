@@ -8,6 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from json import dumps
+import traceback
 
 app = Flask(__name__)
 # Set this to something different as environment variable!
@@ -66,10 +67,13 @@ def user_lookup_callback(_jwt_header, jwt_data):
 # TODO: this smells kinda bad, maybe a better way to handle? (e.g. maybe don't want to return unknown error as str)
 # error handler to return JSON instead of HTML, work kin progress
 app.config['PROPAGATE_EXCEPTIONS'] = True
+
+
 @app.errorhandler(Exception)
 def all_exception_handler(error):
     print('all_exception_handler error')
     print(error)
+    traceback.print_exc()
 
     code = 500
     name = 'unknown'
@@ -86,7 +90,7 @@ def all_exception_handler(error):
         try:
             str(x)
             return True
-        except:
+        except Exception:
             return False
 
     if message == 'unknown' and is_strable(error):
