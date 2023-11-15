@@ -12,6 +12,7 @@ from flask_jwt_extended import current_user
 from sqlalchemy import exc
 from datetime import datetime
 from datetime import timezone
+from werkzeug import exceptions
 
 access_cards = Blueprint('access_cards', __name__)
 
@@ -128,6 +129,8 @@ def update_access_card(access_card_id):
             lastUpdatedAt=access_card.last_updated_at.isoformat(),
             lastUpdatedByUserId=access_card.last_updated_by_user_id
         )
+    except exceptions.NotFound:
+        abort(404, 'unable to find an access card with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -156,6 +159,8 @@ def archive_access_card(access_card_id):
         # TODO: clear any device assignments to node
 
         return jsonify(message='access card archived')
+    except exceptions.NotFound:
+        abort(404, 'unable to find an access card with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 

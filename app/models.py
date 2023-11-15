@@ -245,7 +245,7 @@ class Device(db.Model):
     status = db.Column(
         Enum(DeviceStatusEnum),
         nullable=False,
-        default=DeviceStatusEnum.FUNCTIONAL
+        default=DeviceStatusEnum.AVAILABLE
     )
     name = db.Column(
         db.String(100),

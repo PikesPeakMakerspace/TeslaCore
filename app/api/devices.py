@@ -9,6 +9,7 @@ from flask import request
 from flask import abort
 from flask_jwt_extended import jwt_required
 from sqlalchemy import exc
+from werkzeug import exceptions
 
 devices = Blueprint('devices', __name__)
 
@@ -21,6 +22,7 @@ def create_device():
 
     type = request.json.get("type", None).strip()
     name = request.json.get("name", None).strip()
+    status = request.json.get("status", None).strip()
 
     if (not type or not name):
         abort(422, 'missing type or name')
@@ -29,9 +31,17 @@ def create_device():
     if (not valid_type):
         abort(422, 'invalid type')
 
+    # validate optional status parameter
+    if (status):
+        valid_status = status in [e.value for e in DeviceStatusEnum]
+        if (not valid_status):
+            abort(422, 'invalid status')
+
     try:
         # create
         device = Device(type=type, name=name)
+        if (status):
+            device.status = status
         db.session.add(device)
         db.session.commit()
 
@@ -59,6 +69,7 @@ def update_device(device_id):
 
     type = request.json.get("type", None).strip()
     name = request.json.get("name", None).strip()
+    status = request.json.get("status", None).strip()
 
     if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
@@ -70,16 +81,23 @@ def update_device(device_id):
     if (not valid_type):
         abort(422, 'invalid type')
 
+    # validate optional status parameter
+    if (status):
+        valid_status = status in [e.value for e in DeviceStatusEnum]
+        if (not valid_status):
+            abort(422, 'invalid status')
+
     try:
         # find
         device = Device.query.filter_by(id=device_id).first()
 
-        if not device:
+        if device is None:
             abort(404, 'unable to find a device with that id')
 
         # update
         device.type = type
         device.name = name
+        device.status = status
         db.session.commit()
 
         # return the latest data in database
@@ -90,6 +108,8 @@ def update_device(device_id):
             type=device.type,
             createdAt=device.created_at.isoformat()
         )
+    except exceptions.NotFound:
+        abort(404, 'unable to find a device with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -119,6 +139,8 @@ def archive_device(device_id):
         # TODO: clear user assignments to device
 
         return jsonify(message='device archived')
+    except exceptions.NotFound:
+        abort(404, 'unable to find a device with that id')
     except Exception:
         abort(500, 'an unknown error occurred')
 
