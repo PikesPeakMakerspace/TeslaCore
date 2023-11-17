@@ -2,12 +2,12 @@
 # Makefile for setting up env, running app, testing, deploying
 #
 
-.PHONY: all env run help
+.PHONY: all env checkenv run help
 
 VERSION := $(shell head -n 10 CHANGELOG.md | grep -Eo "[0-9\.]+" | head -n 1)
 PYTHON := python3
 
-all: env help
+all: checkenv help
 
 auth/bin/activate:
 	@echo "creating python venv 'auth'"
@@ -19,14 +19,11 @@ auth/.pip_installed: auth/bin/activate requirements.txt
 
 env: auth/bin/activate auth/.pip_installed env.sh
 
-ifndef VIRTUAL_ENV
-$(error environment not set, please run 'source env.sh')
-endif
-ifndef GOT_API_SECRETS
-$(error secrets not set, please setup 'secrets.sh')
-endif
+checkenv:
+	@[ "${VIRTUAL_ENV}" ] || ( echo error: environment not set, please run 'source env.sh'; exit 1 )
+	@[ "${GOT_API_SECRETS}" ] || ( echo error: secrets not set, please setup 'secrets.sh'; exit 1 )
 
-run: env
+run: checkenv
 	@echo "running api server"
 	flask run
 

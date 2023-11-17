@@ -5,6 +5,7 @@ on: [push]
 jobs:
   run_api:
     runs-on: ubuntu-22.04
+    environment: dev
     strategy:
       max-parallel: 5
 
@@ -14,30 +15,56 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: '3.10'
+      env:
+        TESLA_JWT_SECRET_KEY: ${{ secrets.TESLA_JWT_SECRET_KEY }}
+        GOT_API_SECRETS: 1
     - name: install dependencies
+      env:
+        TESLA_JWT_SECRET_KEY: ${{ secrets.TESLA_JWT_SECRET_KEY }}
+        GOT_API_SECRETS: 1
       run: |
-        echo installing python dependencies
-        python3 -m pip install -r requirements.txt
         echo setting up new venv auth
-        python3 -m venv auth
+        make env
         source env.sh
     - name: lint with flake8
+      env:
+        TESLA_JWT_SECRET_KEY: ${{ secrets.TESLA_JWT_SECRET_KEY }}
+        GOT_API_SECRETS: 1
       run: |
         echo installing flake8 linter
+        source env.sh
         python3 -m pip install flake8
         echo linting with forced fail pipeline for errors
         flake8 . --count --exclude auth --select=E9,F63,F7,F82 --show-source --statistics
         echo linting warnings
         flake8 . --count --exclude auth --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 #    - name: test with pytest
+#      env:
+#        TESLA_JWT_SECRET_KEY: ${{ secrets.TESLA_JWT_SECRET_KEY }}
+#        GOT_API_SECRETS: 1
 #      run: |
 #        echo installing pytest
+#        source env.sh
 #        python3 -m pip install pytest
 #        echo pytest
 #        pytest
-    - name: test running app
+    - name: print debug vars
+      env:
+        TESLA_JWT_SECRET_KEY: ${{ secrets.TESLA_JWT_SECRET_KEY }}
+        GOT_API_SECRETS: 1
       run: |
-        timeout 15 flask run 2>&1 | tee running_log.txt
+        echo showing debug variables
+        source env.sh
+        env
+        make help
+    - name: test running app
+      env:
+        TESLA_JWT_SECRET_KEY: ${{ secrets.TESLA_JWT_SECRET_KEY }}
+        GOT_API_SECRETS: 1
+      run: |
+        echo test running api
+        source env.sh
+        timeout 15 make run 2>&1 | tee running_log.txt
     - name: archive artifacts
       uses: actions/upload-artifact@v3
       with:
