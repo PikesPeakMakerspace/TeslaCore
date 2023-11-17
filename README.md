@@ -32,16 +32,16 @@ Set system environment variables for the flask app and activate virtual environm
 source env.sh
 ```
 
-Install the required packages.
+Setup the secrets (such as `TESLA_JWT_SECRET_KEY`) and place in the file `secrets.sh`
 
+Install the required packages using the make target
 ```
-pip install -r requirements.txt
+make env
 ```
 
-Run the app.
-
+Run the app using the make target
 ```
-flask run
+make run
 ```
 
 ## Repeated Setup
@@ -52,7 +52,7 @@ source env.sh
 
 Run the app
 ```
-flask run
+make run
 ```
 
 
