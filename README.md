@@ -20,23 +20,15 @@ Install `venv`, a Python virtual environment to keep things clean and separate f
 apt install python3.10-venv
 ```
 
-Initiate a virtual environment named `auth` (this takes a while to run).
-
-```
-python3 -m venv auth
-```
-
-Set system environment variables for the flask app and activate virtual environment
-
-```
-source env.sh
-```
-
-Setup the secrets (such as `TESLA_JWT_SECRET_KEY`) and place in the file `secrets.sh`
-
 Install the required packages using the make target
 ```
 make env
+```
+
+Setup the secrets (such as `TESLA_JWT_SECRET_KEY`) and place in the file `secrets.sh`
+Set system environment variables for the flask app and activate virtual environment
+```
+source env.sh
 ```
 
 Run the app using the make target
