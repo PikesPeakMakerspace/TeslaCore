@@ -6,5 +6,7 @@ if [ -r secret.sh ]; then
     source secret.sh
     export GOT_API_SECRETS=1
 else
-    echo "error: please create secret.sh to define the api secrets"
+    if [ -z "${GOT_API_SECRETS}" ]; then
+        echo "error: please create secret.sh to define the api secrets"
+    fi
 fi
