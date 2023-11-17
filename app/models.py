@@ -5,7 +5,7 @@ from sqlalchemy import Enum
 from sqlalchemy.sql import func
 from .model_enums import UserRoleEnum, AccessCardStatusEnum, \
     AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum, \
-    UserEmergeAccessLevelEnum
+    UserEmergeAccessLevelEnum, UserStatusEnum, UserAccessActionEnum
 
 
 def uuid_str():
@@ -50,7 +50,8 @@ class User(db.Model):
     )
     username = db.Column(
         db.String(100),
-        unique=True
+        unique=True,
+        nullable=False,
     )
     first_name = db.Column(
         db.String(100),
@@ -60,18 +61,12 @@ class User(db.Model):
     )
     emerge_access_level = db.Column(
         Enum(UserEmergeAccessLevelEnum),
-        nullable=False,
-        default=UserEmergeAccessLevelEnum.NEW_MEMBER
+        default=UserEmergeAccessLevelEnum.FULL_DAY_ACCESS
     )
     _password = db.Column(
         "password",
         db.String(256),
         nullable=False
-    )
-    created_at = db.Column(
-        db.DateTime,
-        nullable=False,
-        server_default=func.now()
     )
     # TEMP: setting ADMIN by default for dev purposes, UNVERIFIED needs to be
     # set once there's a method to verify etc.
@@ -80,14 +75,28 @@ class User(db.Model):
         nullable=False,
         default=UserRoleEnum.ADMIN
     )
+    status = db.Column(
+        Enum(UserStatusEnum),
+        nullable=False,
+        default=UserStatusEnum.ACTIVE
+    )
     last_logged_in_at = db.Column(
         db.DateTime,
         nullable=True
     )
-    enabled = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
+    last_updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    last_updated_by_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
     )
 
     @property
@@ -100,6 +109,68 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self._password, password)
+
+
+class UserEditLog(db.Model):
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        nullable=False,
+        index=True,
+        default=uuid_str
+    )
+    user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        nullable=False,
+    )
+    role = db.Column(
+        Enum(UserRoleEnum),
+        nullable=False
+    )
+    status = db.Column(
+        Enum(UserStatusEnum),
+        nullable=False
+    )
+    emerge_access_level = db.Column(
+        Enum(UserEmergeAccessLevelEnum),
+        nullable=True,
+    )
+    updated_by_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        # This is nullable because on register there is no active user yet
+        nullable=True,
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+
+
+class UserAccessLog(db.Model):
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        nullable=False,
+        index=True,
+        default=uuid_str
+    )
+    user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        nullable=False,
+    )
+    action = db.Column(
+        Enum(UserAccessActionEnum),
+        nullable=False,
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
 
 
 class AccessCard(db.Model):
@@ -379,5 +450,5 @@ class AccessNodeLog(db.Model):
     # it help to log) response_id (Is this an enum or is there an id with
     # this?) message?
 
-# TODO: don't forget user log (login, logout, disable/enable, etc.)
-# TODO: machine assignment log
+# TODO: machine assignment log?
+# TODO: card assignment log?

@@ -1,4 +1,5 @@
-from ..models import TokenBlocklist, User
+from ..models import TokenBlocklist, User, UserAccessLog
+from ..model_enums import UserAccessActionEnum
 from .. import db
 from .. import app
 from datetime import datetime
@@ -13,6 +14,7 @@ from flask_jwt_extended import get_jwt
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import current_user
 import jwt
+from .users import write_user_update_log
 
 auth = Blueprint('auth', __name__)
 
@@ -31,6 +33,20 @@ def register():
     # Need captcha, email verification, etc.
     new_user = User(username=username, password=password)
     db.session.add(new_user)
+    db.session.commit()
+
+    # get full data
+    db.session.refresh(new_user)
+
+    # log user update
+    write_user_update_log(new_user)
+
+     # log access
+    log = UserAccessLog(
+        user_id=new_user.id,
+        action=UserAccessActionEnum.REGISTER,
+    )
+    db.session.add(log)
     db.session.commit()
 
     return jsonify(message="registration successful")
@@ -54,6 +70,14 @@ def login():
     db.session.query(User).\
         filter(User.username == username).\
         update({'last_logged_in_at': now})
+    db.session.commit()
+
+    # log access
+    log = UserAccessLog(
+        user_id=user.id,
+        action=UserAccessActionEnum.LOGIN,
+    )
+    db.session.add(log)
     db.session.commit()
 
     return jsonify(access_token=access_token, refresh_token=refresh_token)
@@ -98,6 +122,14 @@ def modify_token():
             created_at=now)
         )
         db.session.commit()
+
+    # log access
+    log = UserAccessLog(
+        user_id=current_user.id,
+        action=UserAccessActionEnum.LOGOUT,
+    )
+    db.session.add(log)
+    db.session.commit()
 
     return jsonify(message="goodbye")
 
