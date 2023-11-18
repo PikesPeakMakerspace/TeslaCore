@@ -1,7 +1,7 @@
 from ..models import TokenBlocklist, User, UserAccessLog
 from ..model_enums import UserAccessActionEnum
-from .. import db
-from .. import app
+from ..app import db
+from ..app import app
 from datetime import datetime
 from datetime import timezone
 from flask import jsonify
