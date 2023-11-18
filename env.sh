@@ -1,4 +1,4 @@
-export FLASK_APP=app
+export FLASK_APP=app/app.py
 export FLASK_DEBUG=1
 source auth/bin/activate
 
