@@ -1,7 +1,7 @@
 from ..models import AccessNode, Device
 from ..model_enums import DeviceTypeEnum, UserRoleEnum, AccessNodeStatusEnum
-from .. import db
-from .. import app
+from ..app import db
+from ..app import app
 from ..role_required import role_required
 from flask import jsonify
 from flask import Blueprint
