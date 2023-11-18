@@ -123,3 +123,7 @@ app.register_blueprint(access_nodes_blueprint)
 # API: blueprint for access card endpoints
 from app.api.access_cards import access_cards as access_cards_blueprint
 app.register_blueprint(access_cards_blueprint)
+
+# API: blueprint for user endpoints
+from app.api.users import users as users_blueprint
+app.register_blueprint(users_blueprint)

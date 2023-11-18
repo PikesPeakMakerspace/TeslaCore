@@ -13,6 +13,13 @@ class UserRoleEnum(str, enum.Enum):
     PUBLIC_DISPLAY = 'public display'
 
 
+class UserStatusEnum(str, enum.Enum):
+    ACTIVE = 'active'
+    INACTIVE = 'inactive'
+    SUSPENDED = 'suspended'
+    ARCHIVED = 'archived'
+
+
 class AccessCardStatusEnum(str, enum.Enum):
     ACTIVE = 'active'
     LOST = 'lost'
@@ -21,9 +28,16 @@ class AccessCardStatusEnum(str, enum.Enum):
 
 
 class UserEmergeAccessLevelEnum(str, enum.Enum):
-    NEW_MEMBER = 'new member'
+    BUSINESS_HOURS_ACCESS = 'business hours access'
     FULL_DAY_ACCESS = 'full day access'
     ADMIN = 'admin'
+    BLOCKED = 'blocked'
+
+
+class UserAccessActionEnum(str, enum.Enum):
+    REGISTER = 'register'
+    LOGIN = 'login'
+    LOGOUT = 'logout'
 
 
 class AccessNodeStatusEnum(str, enum.Enum):
