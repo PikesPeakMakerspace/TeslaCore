@@ -121,8 +121,8 @@ def update_access_node(access_node_id):
             status=access_node.status,
             createdAt=access_node.created_at.isoformat()
         )
-    except exceptions.NotFound:
-        abort(404, 'unable to find an access node with that id')
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -151,8 +151,8 @@ def archive_access_node(access_node_id):
         # TODO: clear any device assignments to node
 
         return jsonify(message='access node archived')
-    except exceptions.NotFound:
-        abort(404, 'unable to find an access node with that id')
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')
 
