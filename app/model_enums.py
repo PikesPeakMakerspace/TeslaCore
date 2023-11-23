@@ -22,6 +22,7 @@ class UserStatusEnum(str, enum.Enum):
 
 class AccessCardStatusEnum(str, enum.Enum):
     ACTIVE = 'active'
+    INACTIVE = 'inactive'
     LOST = 'lost'
     STOLEN = 'stolen'
     ARCHIVED = 'archived'

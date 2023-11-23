@@ -1,5 +1,6 @@
-from ..models import AccessCard
-from ..model_enums import AccessCardStatusEnum, UserRoleEnum
+from ..models import AccessCard, UserAccessCard, User, AccessCardLog
+from ..model_enums import AccessCardStatusEnum, UserRoleEnum, \
+    UserStatusEnum
 from ..app import db
 from ..app import app
 from ..role_required import role_required
@@ -10,6 +11,7 @@ from flask import abort
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import current_user
 from sqlalchemy import exc
+from sqlalchemy.orm import aliased
 from datetime import datetime
 from datetime import timezone
 from werkzeug import exceptions
@@ -61,6 +63,15 @@ def create_access_card():
         # get full data
         db.session.refresh(access_card)
 
+        # log access card change
+        access_card_log = AccessCardLog(
+            access_card_id=access_card.id,
+            assigned_by_user_id=current_user.id,
+            status=access_card.status
+        )
+        db.session.add(access_card_log)
+        db.session.commit()
+
         return jsonify(
             id=access_card.id,
             cardNumber=access_card.card_number,
@@ -89,7 +100,7 @@ def update_access_card(access_card_id):
     status = request.json.get("status", None).strip()
 
     if (not access_card_id):
-        abort(422, 'missing device id e.g. /api/accessCards/NODE-ID')
+        abort(422, 'missing access card id e.g. /api/accessCards/CARD-ID')
 
     if (not card_number):
         abort(422, 'missing cardNumber')
@@ -101,9 +112,8 @@ def update_access_card(access_card_id):
             abort(422, 'invalid status')
 
     try:
-        # find
+        # find access card
         access_card = AccessCard.query.filter_by(id=access_card_id).first()
-
         if not access_card:
             abort(404, 'unable to find an access card with that id')
 
@@ -118,6 +128,36 @@ def update_access_card(access_card_id):
 
         # return the latest data in database
         db.session.refresh(access_card)
+
+        # get existing card assignment if applicable
+        user_access_card_join_user = UserAccessCard \
+            .query \
+            .filter_by(
+                access_card_id=access_card_id
+            ) \
+            .join(User, UserAccessCard.assigned_by_user_id == User.id) \
+            .first()
+
+        # log access card change
+        try:
+            assigned_to_user_id = user_access_card_join_user \
+                .assigned_to_user_id
+        except AttributeError:
+            assigned_to_user_id = None
+        try:
+            emerge_access_level = user_access_card_join_user \
+                .emerge_access_level
+        except AttributeError:
+            emerge_access_level = None
+        access_card_log = AccessCardLog(
+            access_card_id=access_card.id,
+            assigned_to_user_id=assigned_to_user_id,
+            assigned_by_user_id=current_user.id,
+            status=access_card.status,
+            emerge_access_level=emerge_access_level
+        )
+        db.session.add(access_card_log)
+        db.session.commit()
 
         return jsonify(
             id=access_card.id,
@@ -146,19 +186,36 @@ def archive_access_card(access_card_id):
         abort(422, 'missing access card id e.g. /api/accessCards/CARD-ID')
 
     try:
-        # find
+        # find access card
         access_card = AccessCard.query.filter_by(id=access_card_id).first()
-
         if not access_card:
-            abort(404, 'unable to find a device with that id')
+            abort(404, 'unable to find an access card with that id')
 
         # archive access card
         access_card.status = AccessCardStatusEnum.ARCHIVED
         db.session.commit()
 
-        # TODO: clear any device assignments to node
+        # clear access card assignments to user if applicable
+        user_access_card = UserAccessCard.query.filter_by(
+            access_card_id=access_card_id
+        ).first()
+        if (user_access_card):
+            user_access_card.delete()
+            db.session.commit()
+
+        # log access card change
+        access_card_log = AccessCardLog(
+            access_card_id=access_card.id,
+            assigned_to_user_id=None,
+            assigned_by_user_id=current_user.id,
+            status=access_card.status,
+            emerge_access_level=None
+        )
+        db.session.add(access_card_log)
+        db.session.commit()
 
         return jsonify(message='access card archived')
+
     except exceptions.NotFound:
         abort(404, 'unable to find an access card with that id')
     except Exception:
@@ -181,7 +238,27 @@ def read_access_cards():
         case 'facilityCode':
             order_by = AccessCard.facility_code
 
-    query = AccessCard.query
+    assignedToUser = aliased(User)
+    assignedByUser = aliased(User)
+    lastUpdatedByUser = aliased(User)
+    query = db.session.query(
+        AccessCard.id,
+        AccessCard.card_number,
+        AccessCard.facility_code,
+        AccessCard.card_type,
+        AccessCard.status,
+        AccessCard.created_at,
+        AccessCard.last_updated_at,
+        AccessCard.last_updated_by_user_id,
+        UserAccessCard.assigned_to_user_id,
+        UserAccessCard.assigned_by_user_id,
+        assignedToUser.first_name.label('to_first_name'),
+        assignedToUser.last_name.label('to_last_name'),
+        assignedByUser.first_name.label('by_first_name'),
+        assignedByUser.last_name.label('by_last_name'),
+        lastUpdatedByUser.first_name.label('last_updated_by_first_name'),
+        lastUpdatedByUser.last_name.label('last_updated_by_last_name')
+    )
 
     # filter by access card type
     if request.args.get('cardType'):
@@ -228,6 +305,28 @@ def read_access_cards():
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
 
+    # join assigned user info
+    query = query \
+        .join(
+            lastUpdatedByUser,
+            AccessCard.last_updated_by_user_id == lastUpdatedByUser.id
+        ) \
+        .join(
+            UserAccessCard,
+            UserAccessCard.access_card_id == AccessCard.id,
+            isouter=True
+        ) \
+        .join(
+            assignedToUser,
+            UserAccessCard.assigned_to_user_id == assignedToUser.id,
+            isouter=True
+        ) \
+        .join(
+            assignedByUser,
+            UserAccessCard.assigned_by_user_id == assignedByUser.id,
+            isouter=True
+        )
+
     results = query \
         .order_by(order_by) \
         .paginate(
@@ -239,7 +338,7 @@ def read_access_cards():
 
     access_cards = []
     for access_card in results:
-        access_cards.append({
+        card_obj = {
             'id': access_card.id,
             'cardNumber': access_card.card_number,
             'facilityCode': access_card.facility_code,
@@ -247,8 +346,21 @@ def read_access_cards():
             'status': access_card.status,
             'createdAt': access_card.created_at.isoformat(),
             'lastUpdatedAt': access_card.last_updated_at.isoformat(),
-            'lastUpdatedByUserId': access_card.last_updated_by_user_id
-        })
+            'lastUpdatedByUserId': access_card.last_updated_by_user_id,
+            'lastUpdatedByFirstName': access_card.last_updated_by_first_name,
+            'lastUpdatedByLastName': access_card.last_updated_by_last_name,
+        }
+
+        # only send assignment values if present
+        if access_card.to_first_name:
+            card_obj['assignedToFirstName'] = access_card.to_first_name
+            card_obj['assignedToLastName'] = access_card.to_last_name
+            card_obj['assignedToUserId'] = access_card.assigned_to_user_id
+            card_obj['assignedByFirstName'] = access_card.by_first_name
+            card_obj['assignedByLastName'] = access_card.by_last_name
+            card_obj['assignedByUserId'] = access_card.assigned_by_user_id
+
+        access_cards.append(card_obj)
 
     return jsonify(access_cards=access_cards)
 
@@ -263,10 +375,74 @@ def read_access_card_view(access_card_id):
 
     try:
         # find
-        access_card = AccessCard.query.filter_by(id=access_card_id).first()
+        access_card = AccessCard.query \
+            .filter_by(id=access_card_id) \
+            .first()
 
         if not access_card:
-            abort(404, 'unable to find a device with that id')
+            abort(404, 'unable to find an access card with that id')
+
+        # get assigned user if assigned
+        assigned_user = {}
+        user = User.query \
+            .join(
+                UserAccessCard,
+                User.id == UserAccessCard.assigned_to_user_id
+            ) \
+            .filter_by(access_card_id=access_card_id) \
+            .first()
+        if user:
+            assigned_user = {
+                'id': user.id,
+                'username': user.username,
+                'firstName': user.first_name,
+                'lastName': user.last_name,
+                'eMergeAccessLevel': user.emerge_access_level,
+                'role': user.role,
+                'status': user.status
+            }
+
+        # get assignment history
+        assignedToUser = aliased(User)
+        assignedByUser = aliased(User)
+        results = db.session.query(
+                AccessCardLog.access_card_id,
+                AccessCardLog.assigned_to_user_id,
+                AccessCardLog.assigned_to_user_id,
+                AccessCardLog.assigned_by_user_id,
+                AccessCardLog.status,
+                AccessCardLog.emerge_access_level,
+                AccessCardLog.created_at,
+                assignedToUser.first_name.label('to_first_name'),
+                assignedToUser.last_name.label('to_last_name'),
+                assignedByUser.first_name.label('by_first_name'),
+                assignedByUser.last_name.label('by_last_name')
+            ) \
+            .filter_by(access_card_id=access_card_id) \
+            .join(
+                assignedToUser,
+                AccessCardLog.assigned_to_user_id == assignedToUser.id
+            ) \
+            .join(
+                assignedByUser,
+                AccessCardLog.assigned_by_user_id == assignedByUser.id
+            ) \
+            .order_by(AccessCardLog.created_at.desc())
+
+        assignment_log = []
+        for assignment in results:
+            assignment_log.append({
+                'accessCardId': assignment.access_card_id,
+                'assignedToUserId': assignment.assigned_to_user_id,
+                'assignedToFirstName': assignment.to_first_name,
+                'assignedToLastName': assignment.to_last_name,
+                'assignedByUserId': assignment.assigned_by_user_id,
+                'assignedByFirstName': assignment.by_first_name,
+                'assignedByLastName': assignment.by_last_name,
+                'status': assignment.status,
+                'emergeAccessLevel': assignment.emerge_access_level,
+                'createdAt': assignment.created_at,
+            })
 
         view = {
             'id': access_card.id,
@@ -277,16 +453,8 @@ def read_access_card_view(access_card_id):
             'createdAt': access_card.created_at.isoformat(),
             'lastUpdatedAt': access_card.last_updated_at.isoformat(),
             'lastUpdatedByUserId': access_card.last_updated_by_user_id,
-            'assignedTo': {
-                'id': 'soon',
-                'more': 'soon',
-            },
-            'assignmentHistory': [
-                {
-                    'id': 'soon',
-                    'more': 'soon'
-                }
-            ]
+            'assignedTo': assigned_user,
+            'assignmentLog': assignment_log
         }
 
         return jsonify(view=view)
@@ -308,8 +476,155 @@ def read_access_card_logs(access_card_id):
         if not access_card:
             abort(404, 'unable to find a access card with that id')
 
-        # TODO: finish this one after assignments are working
+        # TODO: create this as part of logs task, this may move to logs.py
 
         return jsonify(logs='TODO')
+    except Exception:
+        abort(500, 'an unknown error occurred')
+
+
+# assign access card to user
+@app.route("/api/accessCards/<access_card_id>/assign", methods=["POST"])
+@jwt_required()
+def assign_access_card(access_card_id):
+    role_required([UserRoleEnum.ADMIN])
+
+    user_id = request.json.get("userId", None)
+
+    if (not access_card_id):
+        abort(
+            422,
+            'missing access card id e.g. /api/accessCards/CARD-ID/assign'
+        )
+
+    if (not user_id):
+        abort(
+            422,
+            'missing user id'
+        )
+
+    try:
+        # find access card that is also active
+        access_card = AccessCard.query.filter_by(
+            id=access_card_id,
+            status=AccessCardStatusEnum.ACTIVE
+        ).first()
+        if not access_card:
+            abort(404, 'unable to find an active access card with that id')
+
+        # find user that is also active
+        user = User.query.filter_by(
+            id=user_id,
+            status=UserStatusEnum.ACTIVE
+        ).first()
+        if not user:
+            abort(404, 'unable to find a user with that id')
+
+        # don't assign if already assigned
+        user_access_card = UserAccessCard.query.filter_by(
+            assigned_to_user_id=user_id,
+            access_card_id=access_card_id
+        ).first()
+        if user_access_card:
+            abort(409, 'card already assigned')
+
+        # assign card to user
+        user_access_card = UserAccessCard(
+            assigned_to_user_id=user_id,
+            access_card_id=access_card_id,
+            assigned_by_user_id=current_user.id
+        )
+        db.session.add(user_access_card)
+        db.session.commit()
+
+        # log access card change
+        access_card_log = AccessCardLog(
+            access_card_id=access_card.id,
+            assigned_to_user_id=user_access_card.assigned_to_user_id,
+            assigned_by_user_id=user_access_card.assigned_by_user_id,
+            status=access_card.status,
+            emerge_access_level=user.emerge_access_level
+        )
+        db.session.add(access_card_log)
+        db.session.commit()
+
+        return jsonify(message='access card assigned')
+    except exceptions.Conflict as err:
+        abort(409, err)
+    except exceptions.NotFound as err:
+        abort(404, err)
+    except Exception:
+        abort(500, 'an unknown error occurred')
+
+
+# unassign access card to user
+@app.route("/api/accessCards/<access_card_id>/unassign", methods=["DELETE"])
+@jwt_required()
+def unassign_access_card(access_card_id):
+    role_required([UserRoleEnum.ADMIN])
+
+    user_id = request.json.get("userId", None)
+
+    if (not access_card_id):
+        abort(
+            422,
+            'missing access card id e.g. /api/accessCards/CARD-ID/assign'
+        )
+
+    if (not user_id):
+        abort(
+            422,
+            'missing user id'
+        )
+
+    try:
+        # find access card assignment
+        user_access_card = UserAccessCard.query.filter_by(
+            access_card_id=access_card_id,
+            assigned_to_user_id=user_id
+        ).first()
+        if not user_access_card:
+            abort(404, 'unable to find an active access card assignment with \
+                  that user id and access card id')
+
+        # find access card
+        access_card = AccessCard.query.filter_by(
+            id=access_card_id,
+        ).first()
+        if not access_card:
+            abort(404, 'unable to find an access card with that id')
+
+        # find user
+        user = User.query.filter_by(
+            id=user_id
+        ).first()
+        if not user:
+            abort(404, 'unable to find a user with that id')
+
+        # unassign card from user
+        db.session.delete(user_access_card)
+        db.session.commit()
+
+        # make card inactive (if active)
+        if (access_card.status == AccessCardStatusEnum.ACTIVE):
+            access_card.status = AccessCardStatusEnum.INACTIVE
+            db.session.commit()
+
+        # log access card change
+        access_card_log = AccessCardLog(
+            access_card_id=access_card.id,
+            assigned_to_user_id=user_access_card.assigned_to_user_id,
+            assigned_by_user_id=user_access_card.assigned_by_user_id,
+            status=access_card.status,
+            emerge_access_level=user.emerge_access_level
+        )
+        db.session.add(access_card_log)
+        db.session.commit()
+
+        return jsonify(message='access card unassigned')
+    except exceptions.Conflict as err:
+        abort(409, err)
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')

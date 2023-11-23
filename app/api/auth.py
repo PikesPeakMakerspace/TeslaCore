@@ -7,6 +7,7 @@ from datetime import timezone
 from flask import jsonify
 from flask import Blueprint
 from flask import request
+from flask import abort
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import create_refresh_token
 from flask_jwt_extended import get_jwt_identity
@@ -23,6 +24,20 @@ auth = Blueprint('auth', __name__)
 def register():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
+    first_name = request.json.get("firstName", None)
+    last_name = request.json.get("lastName", None)
+
+    if (not username):
+        abort(422, 'missing username')
+
+    if (not password):
+        abort(422, 'missing password')
+
+    if (not first_name):
+        abort(422, 'missing first name')
+
+    if (not last_name):
+        abort(422, 'missing last name')
 
     # check for existing user
     user = User.query.filter_by(username=username).first()
@@ -31,7 +46,12 @@ def register():
 
     # TODO: Better improve this so this doesn't get spammed with new users.
     # Need captcha, email verification, etc.
-    new_user = User(username=username, password=password)
+    new_user = User(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
     db.session.add(new_user)
     db.session.commit()
 
@@ -41,7 +61,7 @@ def register():
     # log user update
     write_user_update_log(new_user)
 
-     # log access
+    # log access
     log = UserAccessLog(
         user_id=new_user.id,
         action=UserAccessActionEnum.REGISTER,
@@ -148,4 +168,6 @@ def who_am_i():
     return jsonify(
       id=current_user.id,
       username=current_user.username,
+      firstName=current_user.first_name,
+      lastName=current_user.last_name
     )
