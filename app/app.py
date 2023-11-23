@@ -75,19 +75,19 @@ app.config['PROPAGATE_EXCEPTIONS'] = True
 @app.errorhandler(Exception)
 def all_exception_handler(error):
     print('all_exception_handler error')
-    print(error)
     traceback.print_exc()
+    # print(dir(error))
 
     code = 500
     name = 'unknown'
-    message = 'unknown'
+    description = 'unknown'
 
     if hasattr(error, 'code'):
         code = error.code
-    if hasattr(error, 'error'):
-        name = error.error
-    if hasattr(error, 'message'):
-        message = error.message
+    if hasattr(error, 'name'):
+        name = str(error.name)
+    if hasattr(error, 'description'):
+        description = str(error.description)
 
     def is_strable(x):
         try:
@@ -96,15 +96,19 @@ def all_exception_handler(error):
         except Exception:
             return False
 
-    if message == 'unknown' and is_strable(error):
-        message = str(error)
+    if description == 'unknown' and is_strable(error):
+        description = str(error)
 
     res = {
         "code": code,
         "error": name,
-        "message": message,
+        "description": description,
     }
-    return Response(status=code, mimetype="application/json", response=dumps(res))
+    return Response(
+        status=code,
+        mimetype="application/json",
+        response=dumps(res)
+    )
 
 
 # API: blueprint for auth endpoints

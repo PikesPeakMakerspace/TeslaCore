@@ -1,4 +1,4 @@
-from ..models import User, UserEditLog
+from ..models import User, UserEditLog, AccessCard, UserAccessCard
 from ..model_enums import UserRoleEnum, UserStatusEnum, \
     UserEmergeAccessLevelEnum
 from ..app import db
@@ -14,6 +14,7 @@ from flask_jwt_extended import current_user
 from datetime import datetime
 from datetime import timezone
 from werkzeug import exceptions
+from sqlalchemy.orm import aliased
 
 users = Blueprint('users', __name__)
 
@@ -346,6 +347,47 @@ def read_user_view(user_id):
         if not user:
             abort(404, 'unable to find a user with that id')
 
+        access_card = {}
+        lastUpdatedByUser = aliased(User)
+        access_card_results = db.session.query(
+            AccessCard.id,
+            AccessCard.card_number,
+            AccessCard.card_type,
+            AccessCard.facility_code,
+            AccessCard.status,
+            AccessCard.last_updated_at,
+            AccessCard.last_updated_by_user_id,
+            UserAccessCard.assigned_to_user_id,
+            lastUpdatedByUser.first_name.label('last_updated_by_first_name'),
+            lastUpdatedByUser.last_name.label('last_updated_by_last_name')
+        ) \
+            .join(
+                UserAccessCard,
+                UserAccessCard.access_card_id == AccessCard.id
+            ) \
+            .filter_by(assigned_to_user_id=user.id) \
+            .join(
+                lastUpdatedByUser,
+                AccessCard.last_updated_by_user_id == lastUpdatedByUser.id
+            ) \
+            .first()
+        if access_card_results:
+            access_card = {
+                'id': access_card_results.id,
+                'cardNumber': access_card_results.card_number,
+                'cardType':  access_card_results.card_type,
+                'facilityCode': access_card_results.facility_code,
+                'status': access_card_results.status,
+                'lastUpdatedAt':
+                    access_card_results.last_updated_at.isoformat(),
+                'lastUpdatedByUserId':
+                    access_card_results.last_updated_by_user_id,
+                'lastUpdatedByFirstName':
+                    access_card_results.last_updated_by_first_name,
+                'lastUpdatedByLastName':
+                    access_card_results.last_updated_by_last_name,
+            }
+
         view = {
             'id': user.id,
             'username': user.username,
@@ -367,16 +409,7 @@ def read_user_view(user_id):
                     'id': 'soon'
                 }
             ],
-            'accessCards': [
-                {
-                    'id': 'soon'
-                }
-            ],
-            'accessCardsRecent': [
-                {
-                    'id': 'soon'
-                }
-            ],
+            'accessCard': access_card,
         }
 
         return jsonify(view=view)
