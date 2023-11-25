@@ -12,8 +12,7 @@ def uuid_str():
     return str(uuid.uuid4())
 
 
-# TODO: Add when token was set to expire, for a future cleanup script, this
-# will get huge otherwise
+# TODO: Cleanup script needed for tokens older than x days
 class TokenBlocklist(db.Model):
     id = db.Column(
         db.String(36),
@@ -34,7 +33,8 @@ class TokenBlocklist(db.Model):
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -123,6 +123,7 @@ class UserEditLog(db.Model):
         db.String(36),
         db.ForeignKey('user.id'),
         nullable=False,
+        index=True
     )
     role = db.Column(
         Enum(UserRoleEnum),
@@ -145,7 +146,8 @@ class UserEditLog(db.Model):
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -161,6 +163,7 @@ class UserAccessLog(db.Model):
         db.String(36),
         db.ForeignKey('user.id'),
         nullable=False,
+        index=True
     )
     action = db.Column(
         Enum(UserAccessActionEnum),
@@ -169,7 +172,8 @@ class UserAccessLog(db.Model):
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -213,7 +217,8 @@ class AccessCard(db.Model):
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -246,22 +251,26 @@ class UserAccessCard(db.Model):
     assigned_to_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     access_card_id = db.Column(
         db.String(36),
         db.ForeignKey('access_card.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     assigned_by_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -276,11 +285,13 @@ class AccessCardLog(db.Model):
     access_card_id = db.Column(
         db.String(36),
         db.ForeignKey('access_card.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     assigned_to_user_id = db.Column(
         db.String(36),
-        db.ForeignKey('user.id')
+        db.ForeignKey('user.id'),
+        index=True
     )
     assigned_by_user_id = db.Column(
         db.String(36),
@@ -289,7 +300,8 @@ class AccessCardLog(db.Model):
     )
     status = db.Column(
         Enum(AccessCardStatusEnum),
-        nullable=False
+        nullable=False,
+        index=True
     )
     emerge_access_level = db.Column(
         Enum(UserEmergeAccessLevelEnum),
@@ -297,7 +309,8 @@ class AccessCardLog(db.Model):
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -337,25 +350,65 @@ class UserDevice(db.Model):
         index=True,
         default=uuid_str
     )
-    user_id = db.Column(
-        db.String(36),
-        db.ForeignKey('user.id'),
-        nullable=False
-    )
     device_id = db.Column(
         db.String(36),
         db.ForeignKey('device.id'),
-        nullable=False
-    )
-    assigned_at = db.Column(
-        db.DateTime,
         nullable=False,
-        server_default=func.now()
+        index=True
+    )
+    assigned_to_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        nullable=False,
+        index=True
     )
     assigned_by_user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
         nullable=False
+    )
+    assigned_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now(),
+        index=True
+    )
+
+
+class DeviceAssignmentLog(db.Model):
+    id = db.Column(
+        db.String(36),
+        primary_key=True,
+        nullable=False,
+        index=True,
+        default=uuid_str
+    )
+    device_id = db.Column(
+        db.String(36),
+        db.ForeignKey('device.id'),
+        nullable=False,
+        index=True
+    )
+    assigned_to_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        index=True
+    )
+    unassigned_from_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        index=True
+    )
+    assigned_by_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        nullable=False,
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now(),
+        index=True
     )
 
 
@@ -417,22 +470,26 @@ class AccessNodeLog(db.Model):
     user_id = db.Column(
         db.String(36),
         db.ForeignKey('user.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     access_card_id = db.Column(
         db.String(36),
         db.ForeignKey('access_card.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     access_node_id = db.Column(
         db.String(36),
         db.ForeignKey('access_node.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     device_id = db.Column(
         db.String(36),
         db.ForeignKey('device.id'),
-        nullable=False
+        nullable=False,
+        index=True
     )
     # what about response status e.g. logged in, logged out, denied, error,
     # talk to Steve
@@ -444,11 +501,9 @@ class AccessNodeLog(db.Model):
     created_at = db.Column(
         db.DateTime,
         nullable=False,
-        server_default=func.now()
+        server_default=func.now(),
+        index=True
     )
     # request_id (Do requests have ids in general now? Is it relevant or will
     # it help to log) response_id (Is this an enum or is there an id with
     # this?) message?
-
-# TODO: machine assignment log?
-# TODO: card assignment log?

@@ -1,5 +1,10 @@
-from ..models import Device
-from ..model_enums import DeviceTypeEnum, UserRoleEnum, DeviceStatusEnum
+from ..models import Device, User, UserDevice, DeviceAssignmentLog
+from ..model_enums import (
+    DeviceTypeEnum,
+    UserRoleEnum,
+    DeviceStatusEnum,
+    UserStatusEnum
+)
 from ..app import db
 from ..app import app
 from ..role_required import role_required
@@ -8,6 +13,7 @@ from flask import Blueprint
 from flask import request
 from flask import abort
 from flask_jwt_extended import jwt_required
+from flask_jwt_extended import current_user
 from sqlalchemy import exc
 from werkzeug import exceptions
 
@@ -288,5 +294,144 @@ def read_device_logs(device_id):
         # TODO: finish this one after node responses are known
 
         return jsonify(logs='TODO')
+    except Exception:
+        abort(500, 'an unknown error occurred')
+
+
+# assign device to user
+@app.route("/api/devices/<device_id>/assign", methods=["POST"])
+@jwt_required()
+def assign_device(device_id):
+    role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
+
+    user_id = request.json.get("userId", None)
+
+    if (not device_id):
+        abort(
+            422,
+            'missing device id e.g. /api/devices/DEVICE-ID/assign'
+        )
+
+    if (not user_id):
+        abort(
+            422,
+            'missing user id'
+        )
+
+    try:
+        # find device that is also active
+        device = Device.query.filter_by(
+            id=device_id,
+            status=DeviceStatusEnum.AVAILABLE
+        ).first()
+        if not device:
+            abort(404, 'unable to find an active device with that id')
+
+        # find user that is also active
+        user = User.query.filter_by(
+            id=user_id,
+            status=UserStatusEnum.ACTIVE
+        ).first()
+        if not user:
+            abort(404, 'unable to find a user with that id')
+
+        # don't assign if already assigned to device
+        user_device = UserDevice.query.filter_by(
+            assigned_to_user_id=user_id,
+            device_id=device_id
+        ).first()
+        if user_device:
+            abort(409, 'user already assigned to this device')
+
+        # assign device to user
+        user_device = UserDevice(
+            device_id=device_id,
+            assigned_to_user_id=user_id,
+            assigned_by_user_id=current_user.id
+
+        )
+        db.session.add(user_device)
+        db.session.commit()
+
+        # log device change
+        device_assignment_log = DeviceAssignmentLog(
+            device_id=device_id,
+            assigned_to_user_id=user_device.assigned_to_user_id,
+            assigned_by_user_id=user_device.assigned_by_user_id,
+        )
+        db.session.add(device_assignment_log)
+        db.session.commit()
+
+        return jsonify(message='device assigned')
+    except exceptions.Conflict as err:
+        abort(409, err)
+    except exceptions.NotFound as err:
+        abort(404, err)
+    except Exception:
+        abort(500, 'an unknown error occurred')
+
+
+# unassign device to user
+@app.route("/api/devices/<device_id>/unassign", methods=["DELETE"])
+@jwt_required()
+def unassign_device(device_id):
+    role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
+
+    user_id = request.json.get("userId", None)
+
+    if (not device_id):
+        abort(
+            422,
+            'missing device id e.g. /api/devices/DEVICE-ID/assign'
+        )
+
+    if (not user_id):
+        abort(
+            422,
+            'missing user id'
+        )
+
+    try:
+        # find device assignment
+        user_device = UserDevice.query.filter_by(
+            device_id=device_id,
+            assigned_to_user_id=user_id
+        ).first()
+        if not user_device:
+            abort(404, 'unable to find an active device assignment with \
+                  that user id and device id')
+
+        # find device
+        device = Device.query.filter_by(
+            id=device_id,
+        ).first()
+        if not device:
+            abort(404, 'unable to find a device with that id')
+
+        # find user
+        user = User.query.filter_by(
+            id=user_id
+        ).first()
+        if not user:
+            abort(404, 'unable to find a user with that id')
+
+        # unassign card from user
+        db.session.delete(user_device)
+        db.session.commit()
+
+        # log device change
+        device_assignment_log = DeviceAssignmentLog(
+            device_id=device_id,
+            unassigned_from_user_id=user_id,
+            assigned_by_user_id=user_device.assigned_by_user_id
+        )
+        db.session.add(device_assignment_log)
+        db.session.commit()
+
+        return jsonify(message='device unassigned')
+    except exceptions.Conflict as err:
+        abort(409, err)
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')

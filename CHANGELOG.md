@@ -1,3 +1,15 @@
+## v1.8.0
+
+2023-11-24
+
+-   add device user assignments and assignment logging
+
+## v1.7.0
+
+2023-11-23
+
+-   add access card user assignments
+
 ## v1.6.0
 
 2023-11-16
