@@ -1,5 +1,7 @@
-from ..models import AccessNode, Device
-from ..model_enums import DeviceTypeEnum, UserRoleEnum, AccessNodeStatusEnum
+from ..models import AccessNode, Device, UserAccessCard, AccessCard, \
+    AccessNodeLog, User
+from ..model_enums import DeviceTypeEnum, UserRoleEnum, \
+    AccessNodeStatusEnum, AccessNodeScanActionEnum
 from ..app import db
 from ..app import app
 from ..role_required import role_required
@@ -8,6 +10,7 @@ from flask import Blueprint
 from flask import request
 from flask import abort
 from flask_jwt_extended import jwt_required
+from flask_jwt_extended import current_user
 from sqlalchemy import exc
 from werkzeug import exceptions
 
@@ -127,8 +130,6 @@ def update_access_node(access_node_id):
         abort(500, 'an unknown error occurred')
 
 
-# TODO: Consider removing references from other tables once those exist
-# archive an access node
 @app.route("/api/accessNodes/<access_node_id>", methods=["DELETE"])
 @jwt_required()
 def archive_access_node(access_node_id):
@@ -253,6 +254,58 @@ def read_access_node_view(access_node_id):
         if not access_node:
             abort(404, 'unable to find a device with that id')
 
+        # device assigned to access node
+        device = Device.query \
+            .filter_by(id=access_node.device_id).first()
+        device_res = {}
+        if device:
+            device_res = {
+                'id': device.id,
+                'name': device.name,
+                'type': device.type,
+                'createdAt': device.created_at.isoformat(),
+                'status': device.status,
+                'accessNode': access_node.id,
+            }
+
+        # TODO: this is no longer DRY (don't repeat yourself)
+        # recent access history
+        access_logs_res = []
+        access_logs = db.session.query(
+            AccessNodeLog.user_id,
+            AccessNodeLog.access_card_id,
+            AccessNodeLog.access_node_id,
+            AccessNodeLog.device_id,
+            AccessNodeLog.access_node_id,
+            AccessNodeLog.action,
+            AccessNodeLog.success,
+            AccessNodeLog.created_by_user_id,
+            AccessNodeLog.created_at,
+            User.first_name,
+            User.last_name,
+            Device.name
+        ) \
+            .join(User, User.id == AccessNodeLog.user_id) \
+            .join(Device, Device.id == AccessNodeLog.device_id) \
+            .filter(AccessNodeLog.access_node_id == access_node.id) \
+            .order_by(AccessNodeLog.created_at.desc()) \
+            .limit(100).all()
+        if access_logs:
+            for access_log in access_logs:
+                access_logs_res.append({
+                    'userId': access_log.user_id,
+                    'userFirstName': access_log.first_name,
+                    'userLastName': access_log.last_name,
+                    'accessCardId': access_log.access_card_id,
+                    'accessNodeId': access_log.access_node_id,
+                    'deviceId': access_log.device_id,
+                    'deviceName': access_log.name,
+                    'action': access_log.action,
+                    'success': access_log.success,
+                    'createdByUserId': access_log.created_by_user_id,
+                    'createdAt': access_log.created_at.isoformat()
+                })
+
         view = {
             'id': access_node.id,
             'name': access_node.name,
@@ -260,31 +313,13 @@ def read_access_node_view(access_node_id):
             'macAddress': access_node.mac_address,
             'createdAt': access_node.created_at.isoformat(),
             'status': access_node.status,
-            'upTime': 'soon',
-            'lastPinged': 'soon',
-            'device': {
-                'id': 'soon',
-                'more': 'soon'
-            },
-            'userRecent': {
-                'id': 'soon',
-                'more': 'soon',
-            },
-            'usersWithAccess': [
-                {
-                    'id': 'soon',
-                    'more': 'soon',
-                }
-            ],
-            'accessHistory': [
-                {
-                    'id': 'soon',
-                    'more': 'soon'
-                }
-            ]
+            'device': device_res,
+            'accessHistory': access_logs_res
         }
 
         return jsonify(view=view)
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -309,5 +344,82 @@ def read_access_node_logs(access_node_id):
         # TODO: finish this one after node responses are known
 
         return jsonify(logs='TODO')
+    except Exception:
+        abort(500, 'an unknown error occurred')
+
+
+# manually scan an access card (override, requires admin jwt auth for now)
+@app.route("/api/accessNodes/<access_node_id>/scan", methods=["POST"])
+@jwt_required()
+def scan_access_node(access_node_id):
+    role_required([UserRoleEnum.ADMIN])
+
+    # TODO: consider just setting a user_id here, modeling card scan
+    # as REST to start
+    access_card_number = request.json.get("accessCardNumber", None)
+    action = request.json.get("action", None).strip()
+
+    if (not access_node_id or not access_card_number or not action):
+        abort(422, 'missing accessNodeId or accessCardNumber or action')
+
+    valid_action = action \
+        in [e.value for e in AccessNodeScanActionEnum]
+    if not valid_action:
+        abort(422, 'invalid action')
+
+    try:
+        # get access node
+        access_node = AccessNode.query.filter_by(id=access_node_id).first()
+        if not access_node:
+            abort(404, 'unable to find an access node with that id')
+
+        # get user access card assignment
+        user_access_card = db.session.query(
+            UserAccessCard.assigned_to_user_id,
+            UserAccessCard.access_card_id
+        ) \
+            .join(
+                AccessCard,
+                AccessCard.id == UserAccessCard.access_card_id
+            ) \
+            .filter_by(card_number=access_card_number) \
+            .first()
+        if not user_access_card:
+            abort(404, 'unable to find a user with that access card id')
+
+        # TODO: consider informing the actual node here via MQTT message
+
+        # write to access log
+        access_log = AccessNodeLog(
+            user_id=user_access_card.assigned_to_user_id,
+            access_card_id=user_access_card.access_card_id,
+            access_node_id=access_node.id,
+            device_id=access_node.device_id,
+            action=action,
+            success=True,
+            created_by_user_id=current_user.id
+        )
+        db.session.add(access_log)
+        db.session.commit()
+
+        # get full data
+        db.session.refresh(access_log)
+
+        return jsonify(
+            id=access_log.id,
+            userId=access_log.user_id,
+            accessCardId=access_log.access_card_id,
+            accessNodeId=access_log.access_node_id,
+            deviceId=access_log.device_id,
+            action=access_log.action,
+            success=access_log.success,
+            createdByUserId=access_log.created_by_user_id,
+            createdAt=access_log.created_at.isoformat()
+        )
+
+    except exc.IntegrityError:
+        abort(409, 'an access node with that name already exists')
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')

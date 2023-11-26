@@ -5,7 +5,8 @@ from sqlalchemy import Enum
 from sqlalchemy.sql import func
 from .model_enums import UserRoleEnum, AccessCardStatusEnum, \
     AccessNodeStatusEnum, DeviceTypeEnum, DeviceStatusEnum, \
-    UserEmergeAccessLevelEnum, UserStatusEnum, UserAccessActionEnum
+    UserEmergeAccessLevelEnum, UserStatusEnum, UserAccessActionEnum, \
+    AccessNodeScanActionEnum
 
 
 def uuid_str():
@@ -433,11 +434,6 @@ class AccessNode(db.Model):
         unique=True,
         nullable=False,
     )
-    created_at = db.Column(
-        db.DateTime,
-        nullable=False,
-        server_default=func.now()
-    )
     status = db.Column(
         Enum(AccessNodeStatusEnum),
         nullable=False,
@@ -456,6 +452,11 @@ class AccessNode(db.Model):
         db.String(36),
         db.ForeignKey('device.id'),
         nullable=True
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=func.now()
     )
 
 
@@ -491,11 +492,20 @@ class AccessNodeLog(db.Model):
         nullable=False,
         index=True
     )
-    # what about response status e.g. logged in, logged out, denied, error,
-    # talk to Steve
+    action = db.Column(
+        Enum(AccessNodeScanActionEnum),
+        nullable=False,
+        index=True
+    )
     success = db.Column(
         db.Boolean,
         default=False,
+        nullable=False,
+        index=True
+    )
+    created_by_user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
         nullable=False
     )
     created_at = db.Column(
@@ -504,6 +514,3 @@ class AccessNodeLog(db.Model):
         server_default=func.now(),
         index=True
     )
-    # request_id (Do requests have ids in general now? Is it relevant or will
-    # it help to log) response_id (Is this an enum or is there an id with
-    # this?) message?

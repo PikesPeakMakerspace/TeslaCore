@@ -1,4 +1,5 @@
-from ..models import Device, User, UserDevice, DeviceAssignmentLog
+from ..models import Device, User, UserDevice, DeviceAssignmentLog, \
+    AccessNode, AccessNodeLog
 from ..model_enums import (
     DeviceTypeEnum,
     UserRoleEnum,
@@ -241,35 +242,92 @@ def read_device_view(device_id):
         if not device:
             abort(404, 'unable to find a device with that id')
 
+        # access node with device assigned
+        access_node = AccessNode.query.filter_by(device_id=device_id).first()
+        access_node_res = {}
+        if access_node:
+            access_node_res = {
+                'id': access_node.id,
+                'type': access_node.type,
+                'name': access_node.name,
+                'mac_address': access_node.mac_address,
+                'status': access_node.status,
+                'last_accessed_user_id': access_node.last_accessed_user_id,
+                'last_accessed_at': access_node.last_accessed_at,
+                'device_id': access_node.device_id,
+                'created_at': access_node.created_at
+            }
+
+        # users with access to device
+        device_users = db.session.query(
+            User.id,
+            User.first_name,
+            User.last_name
+        ) \
+            .join(UserDevice, User.id == UserDevice.assigned_to_user_id) \
+            .filter_by(device_id=device_id) \
+            .order_by(User.last_name, User.first_name)
+        device_users_res = []
+        for device_user in device_users:
+            user_obj = {
+                'id': device_user.id,
+                'firstName': device_user.first_name,
+                'lastName': device_user.last_name
+            }
+            device_users_res.append(user_obj)
+
+        # TODO: this is no longer DRY (don't repeat yourself)
+        # recent access history
+        access_logs_res = []
+        access_logs = db.session.query(
+            AccessNodeLog.user_id,
+            AccessNodeLog.access_card_id,
+            AccessNodeLog.access_node_id,
+            AccessNodeLog.device_id,
+            AccessNodeLog.access_node_id,
+            AccessNodeLog.action,
+            AccessNodeLog.success,
+            AccessNodeLog.created_by_user_id,
+            AccessNodeLog.created_at,
+            User.first_name,
+            User.last_name,
+            Device.name
+        ) \
+            .join(User, User.id == AccessNodeLog.user_id) \
+            .join(Device, Device.id == AccessNodeLog.device_id) \
+            .filter(AccessNodeLog.access_node_id == access_node.id) \
+            .order_by(AccessNodeLog.created_at.desc()) \
+            .limit(100).all()
+        if access_logs:
+            for access_log in access_logs:
+                access_logs_res.append({
+                    'userId': access_log.user_id,
+                    'userFirstName': access_log.first_name,
+                    'userLastName': access_log.last_name,
+                    'accessCardId': access_log.access_card_id,
+                    'accessNodeId': access_log.access_node_id,
+                    'deviceId': access_log.device_id,
+                    'deviceName': access_log.name,
+                    'action': access_log.action,
+                    'success': access_log.success,
+                    'createdByUserId': access_log.created_by_user_id,
+                    'createdAt': access_log.created_at.isoformat()
+                })
+
         view = {
             'id': device.id,
             'name': device.name,
             'type': device.type,
             'createdAt': device.created_at.isoformat(),
             'status': device.status,
-            'accessNode': {
-                'id': 'soon',
-                'more': 'soon'
-            },
-            'userRecent': {
-                'id': 'soon',
-                'more': 'soon',
-            },
-            'usersWithAccess': [
-                {
-                    'id': 'soon',
-                    'more': 'soon',
-                }
-            ],
-            'accessHistory': [
-                {
-                    'id': 'soon',
-                    'more': 'soon'
-                }
-            ]
+            'accessNode': access_node_res,
+            'deviceUsers': device_users_res,
+            'accessHistory': access_logs_res
         }
 
         return jsonify(view=view)
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')
 

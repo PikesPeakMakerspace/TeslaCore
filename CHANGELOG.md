@@ -1,3 +1,10 @@
+## v1.9.0
+
+2023-11-25
+
+-   fill in additional profile data for users, access nodes, devices
+-   add an access node "scan" endpoint for access node manual overrides and testing
+
 ## v1.8.0
 
 2023-11-24
