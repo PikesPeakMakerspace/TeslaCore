@@ -49,6 +49,13 @@ class AccessNodeStatusEnum(str, enum.Enum):
     ARCHIVED = 'archived'
 
 
+class AccessNodeScanActionEnum(str, enum.Enum):
+    LOGIN = 'login'
+    LOGOUT = 'logout'
+    HELLO = 'hello'
+    ACKNOWLEDGE = 'acknowledge'
+
+
 class DeviceTypeEnum(str, enum.Enum):
     # TODO: "machine" may be too generalized, make a new enum value for each
     # unique configuration a tesla node needs to work through
