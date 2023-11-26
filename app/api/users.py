@@ -1,4 +1,5 @@
-from ..models import User, UserEditLog, AccessCard, UserAccessCard
+from ..models import User, UserEditLog, AccessCard, UserAccessCard, Device, \
+    UserDevice, AccessNodeLog
 from ..model_enums import UserRoleEnum, UserStatusEnum, \
     UserEmergeAccessLevelEnum
 from ..app import db
@@ -388,6 +389,62 @@ def read_user_view(user_id):
                     access_card_results.last_updated_by_last_name,
             }
 
+        # assigned devices
+        user_devices = db.session.query(
+            Device.id,
+            Device.name
+        ) \
+            .join(UserDevice, Device.id == UserDevice.device_id) \
+            .filter_by(assigned_to_user_id=user_id) \
+            .order_by(Device.name)
+        users_devices_res = []
+        for user_device in user_devices:
+            device = {
+                'id': user_device.id,
+                'name': user_device.name
+            }
+            users_devices_res.append(device)
+
+        # recent access history
+        # TODO: not quite DRY, yet a little different than devices and nodes,
+        # consider consolidating when building reporting that will also
+        # run this
+        access_logs_res = []
+        access_logs = db.session.query(
+            AccessNodeLog.user_id,
+            AccessNodeLog.access_card_id,
+            AccessNodeLog.access_node_id,
+            AccessNodeLog.device_id,
+            AccessNodeLog.access_node_id,
+            AccessNodeLog.action,
+            AccessNodeLog.success,
+            AccessNodeLog.created_by_user_id,
+            AccessNodeLog.created_at,
+            User.first_name,
+            User.last_name,
+            Device.name
+        ) \
+            .join(User, User.id == AccessNodeLog.user_id) \
+            .join(Device, Device.id == AccessNodeLog.device_id) \
+            .filter(AccessNodeLog.user_id == user_id) \
+            .order_by(AccessNodeLog.created_at.desc()) \
+            .limit(100).all()
+        if access_logs:
+            for access_log in access_logs:
+                access_logs_res.append({
+                    'userId': access_log.user_id,
+                    'userFirstName': access_log.first_name,
+                    'userLastName': access_log.last_name,
+                    'accessCardId': access_log.access_card_id,
+                    'accessNodeId': access_log.access_node_id,
+                    'deviceId': access_log.device_id,
+                    'deviceName': access_log.name,
+                    'action': access_log.action,
+                    'success': access_log.success,
+                    'createdByUserId': access_log.created_by_user_id,
+                    'createdAt': access_log.created_at.isoformat()
+                })
+
         view = {
             'id': user.id,
             'username': user.username,
@@ -399,20 +456,14 @@ def read_user_view(user_id):
             'createdAt': user.created_at.isoformat(),
             'lastUpdatedAt': user.last_updated_at.isoformat(),
             'lastUpdatedByUserId': user.last_updated_by_user_id,
-            'devices': [
-                {
-                    'id': 'soon'
-                }
-            ],
-            'devicesRecent': [
-                {
-                    'id': 'soon'
-                }
-            ],
+            'devices': users_devices_res,
+            'accessHistory': access_logs_res,
             'accessCard': access_card,
         }
 
         return jsonify(view=view)
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')
 

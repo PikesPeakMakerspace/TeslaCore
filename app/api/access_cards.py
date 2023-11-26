@@ -175,8 +175,6 @@ def update_access_card(access_card_id):
         abort(500, 'an unknown error occurred')
 
 
-# TODO: Consider removing references from other tables once those exist
-# archive an access card
 @app.route("/api/accessCards/<access_card_id>", methods=["DELETE"])
 @jwt_required()
 def archive_access_card(access_card_id):
@@ -458,6 +456,8 @@ def read_access_card_view(access_card_id):
         }
 
         return jsonify(view=view)
+    except exceptions.NotFound as err:
+        abort(404, err)
     except Exception:
         abort(500, 'an unknown error occurred')
 
