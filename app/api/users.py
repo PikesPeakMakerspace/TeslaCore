@@ -17,6 +17,7 @@ from datetime import timezone
 from werkzeug import exceptions
 from sqlalchemy.orm import aliased
 from ..query.device_access_logs import device_access_logs
+from ..utils.array_to_csv_flask_response import array_to_csv_flask_response
 
 users = Blueprint('users', __name__)
 
@@ -244,6 +245,9 @@ def archive_user(user_id):
 def read_users():
     role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
 
+    # CSV download?
+    content_type = request.headers.get('Content-Type')
+
     # set order by
     order_by = User.username
     match request.args.get('orderBy'):
@@ -329,6 +333,8 @@ def read_users():
             'lastUpdatedByUserId': user.last_updated_by_user_id
         })
 
+    if content_type == 'text/csv':
+        return array_to_csv_flask_response(users)
     return jsonify(users=users)
 
 
