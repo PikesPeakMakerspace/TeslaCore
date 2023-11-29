@@ -134,3 +134,7 @@ app.register_blueprint(access_cards_blueprint)
 # API: blueprint for user endpoints
 from app.api.users import users as users_blueprint
 app.register_blueprint(users_blueprint)
+
+# API: blueprint for user endpoints
+from app.api.reports import reports as reports_blueprint
+app.register_blueprint(reports_blueprint)

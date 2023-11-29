@@ -1,5 +1,5 @@
 from ..models import Device, User, UserDevice, DeviceAssignmentLog, \
-    AccessNode, AccessNodeLog
+    AccessNode
 from ..model_enums import (
     DeviceTypeEnum,
     UserRoleEnum,
@@ -17,6 +17,7 @@ from flask_jwt_extended import jwt_required
 from flask_jwt_extended import current_user
 from sqlalchemy import exc
 from werkzeug import exceptions
+from ..query.device_access_logs import device_access_logs
 
 devices = Blueprint('devices', __name__)
 
@@ -276,43 +277,12 @@ def read_device_view(device_id):
             }
             device_users_res.append(user_obj)
 
-        # TODO: this is no longer DRY (don't repeat yourself)
-        # recent access history
-        access_logs_res = []
-        access_logs = db.session.query(
-            AccessNodeLog.user_id,
-            AccessNodeLog.access_card_id,
-            AccessNodeLog.access_node_id,
-            AccessNodeLog.device_id,
-            AccessNodeLog.access_node_id,
-            AccessNodeLog.action,
-            AccessNodeLog.success,
-            AccessNodeLog.created_by_user_id,
-            AccessNodeLog.created_at,
-            User.first_name,
-            User.last_name,
-            Device.name
-        ) \
-            .join(User, User.id == AccessNodeLog.user_id) \
-            .join(Device, Device.id == AccessNodeLog.device_id) \
-            .filter(AccessNodeLog.access_node_id == access_node.id) \
-            .order_by(AccessNodeLog.created_at.desc()) \
-            .limit(100).all()
-        if access_logs:
-            for access_log in access_logs:
-                access_logs_res.append({
-                    'userId': access_log.user_id,
-                    'userFirstName': access_log.first_name,
-                    'userLastName': access_log.last_name,
-                    'accessCardId': access_log.access_card_id,
-                    'accessNodeId': access_log.access_node_id,
-                    'deviceId': access_log.device_id,
-                    'deviceName': access_log.name,
-                    'action': access_log.action,
-                    'success': access_log.success,
-                    'createdByUserId': access_log.created_by_user_id,
-                    'createdAt': access_log.created_at.isoformat()
-                })
+        access_logs = device_access_logs(
+            {
+                'per_page': 100,
+                'device_id': device_id,
+            }
+        )
 
         view = {
             'id': device.id,
@@ -322,36 +292,12 @@ def read_device_view(device_id):
             'status': device.status,
             'accessNode': access_node_res,
             'deviceUsers': device_users_res,
-            'accessHistory': access_logs_res
+            'accessHistory': access_logs
         }
 
         return jsonify(view=view)
     except exceptions.NotFound as err:
         abort(404, err)
-    except Exception:
-        abort(500, 'an unknown error occurred')
-
-
-# get device-centric access logs
-# example: device could have had multiple nodes assigned at different times,
-# yet people care about how many people use the device, not the node (unless
-# curious about the node itself specifically, see access node endpoints)
-@app.route("/api/devices/<device_id>/logs", methods=["GET"])
-@jwt_required()
-def read_device_logs(device_id):
-    if (not device_id):
-        abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
-
-    try:
-        # find
-        device = Device.query.filter_by(id=device_id).first()
-
-        if not device:
-            abort(404, 'unable to find a device with that id')
-
-        # TODO: finish this one after node responses are known
-
-        return jsonify(logs='TODO')
     except Exception:
         abort(500, 'an unknown error occurred')
 
