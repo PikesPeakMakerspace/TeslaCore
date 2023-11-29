@@ -1,5 +1,5 @@
 from ..models import User, UserEditLog, AccessCard, UserAccessCard, Device, \
-    UserDevice, AccessNodeLog
+    UserDevice
 from ..model_enums import UserRoleEnum, UserStatusEnum, \
     UserEmergeAccessLevelEnum
 from ..app import db
@@ -16,6 +16,7 @@ from datetime import datetime
 from datetime import timezone
 from werkzeug import exceptions
 from sqlalchemy.orm import aliased
+from ..query.device_access_logs import device_access_logs
 
 users = Blueprint('users', __name__)
 
@@ -405,45 +406,12 @@ def read_user_view(user_id):
             }
             users_devices_res.append(device)
 
-        # recent access history
-        # TODO: not quite DRY, yet a little different than devices and nodes,
-        # consider consolidating when building reporting that will also
-        # run this
-        access_logs_res = []
-        access_logs = db.session.query(
-            AccessNodeLog.user_id,
-            AccessNodeLog.access_card_id,
-            AccessNodeLog.access_node_id,
-            AccessNodeLog.device_id,
-            AccessNodeLog.access_node_id,
-            AccessNodeLog.action,
-            AccessNodeLog.success,
-            AccessNodeLog.created_by_user_id,
-            AccessNodeLog.created_at,
-            User.first_name,
-            User.last_name,
-            Device.name
-        ) \
-            .join(User, User.id == AccessNodeLog.user_id) \
-            .join(Device, Device.id == AccessNodeLog.device_id) \
-            .filter(AccessNodeLog.user_id == user_id) \
-            .order_by(AccessNodeLog.created_at.desc()) \
-            .limit(100).all()
-        if access_logs:
-            for access_log in access_logs:
-                access_logs_res.append({
-                    'userId': access_log.user_id,
-                    'userFirstName': access_log.first_name,
-                    'userLastName': access_log.last_name,
-                    'accessCardId': access_log.access_card_id,
-                    'accessNodeId': access_log.access_node_id,
-                    'deviceId': access_log.device_id,
-                    'deviceName': access_log.name,
-                    'action': access_log.action,
-                    'success': access_log.success,
-                    'createdByUserId': access_log.created_by_user_id,
-                    'createdAt': access_log.created_at.isoformat()
-                })
+        access_logs = device_access_logs(
+            {
+                'per_page': 100,
+                'user_id': user_id,
+            }
+        )
 
         view = {
             'id': user.id,
@@ -457,54 +425,12 @@ def read_user_view(user_id):
             'lastUpdatedAt': user.last_updated_at.isoformat(),
             'lastUpdatedByUserId': user.last_updated_by_user_id,
             'devices': users_devices_res,
-            'accessHistory': access_logs_res,
+            'deviceAccessHistory': access_logs,
             'accessCard': access_card,
         }
 
         return jsonify(view=view)
     except exceptions.NotFound as err:
         abort(404, err)
-    except Exception:
-        abort(500, 'an unknown error occurred')
-
-
-# get account edit logs
-@app.route("/api/users/<user_id>/editLogs", methods=["GET"])
-@jwt_required()
-def read_user_edit_logs(user_id):
-    role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
-
-    if (not user_id):
-        abort(422, 'missing user id e.g. /api/users/USER-ID')
-
-    try:
-        # find
-        user = User.query.filter_by(id=user_id).first()
-
-        if not user:
-            abort(404, 'unable to find a user with that id')
-
-        return jsonify(logs='TODO')
-    except Exception:
-        abort(500, 'an unknown error occurred')
-
-
-# get account access logs
-@app.route("/api/users/<user_id>/accessLogs", methods=["GET"])
-@jwt_required()
-def read_user_access_logs(user_id):
-    if (not user_id):
-        abort(422, 'missing user id e.g. /api/users/USER-ID')
-
-    try:
-        # find
-        user = User.query.filter_by(id=user_id).first()
-
-        if not user:
-            abort(404, 'unable to find a user with that id')
-
-        # TODO: finish this one after node responses are known
-
-        return jsonify(logs='TODO')
     except Exception:
         abort(500, 'an unknown error occurred')

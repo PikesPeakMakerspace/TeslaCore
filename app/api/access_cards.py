@@ -15,6 +15,7 @@ from sqlalchemy.orm import aliased
 from datetime import datetime
 from datetime import timezone
 from werkzeug import exceptions
+from ..query.access_card_edit_logs import access_card_edit_logs
 
 access_cards = Blueprint('access_cards', __name__)
 
@@ -401,46 +402,13 @@ def read_access_card_view(access_card_id):
             }
 
         # get assignment history
-        assignedToUser = aliased(User)
-        assignedByUser = aliased(User)
-        results = db.session.query(
-                AccessCardLog.access_card_id,
-                AccessCardLog.assigned_to_user_id,
-                AccessCardLog.assigned_to_user_id,
-                AccessCardLog.assigned_by_user_id,
-                AccessCardLog.status,
-                AccessCardLog.emerge_access_level,
-                AccessCardLog.created_at,
-                assignedToUser.first_name.label('to_first_name'),
-                assignedToUser.last_name.label('to_last_name'),
-                assignedByUser.first_name.label('by_first_name'),
-                assignedByUser.last_name.label('by_last_name')
-            ) \
-            .filter_by(access_card_id=access_card_id) \
-            .join(
-                assignedToUser,
-                AccessCardLog.assigned_to_user_id == assignedToUser.id
-            ) \
-            .join(
-                assignedByUser,
-                AccessCardLog.assigned_by_user_id == assignedByUser.id
-            ) \
-            .order_by(AccessCardLog.created_at.desc())
-
-        assignment_log = []
-        for assignment in results:
-            assignment_log.append({
-                'accessCardId': assignment.access_card_id,
-                'assignedToUserId': assignment.assigned_to_user_id,
-                'assignedToFirstName': assignment.to_first_name,
-                'assignedToLastName': assignment.to_last_name,
-                'assignedByUserId': assignment.assigned_by_user_id,
-                'assignedByFirstName': assignment.by_first_name,
-                'assignedByLastName': assignment.by_last_name,
-                'status': assignment.status,
-                'emergeAccessLevel': assignment.emerge_access_level,
-                'createdAt': assignment.created_at,
-            })
+        assignment_log = access_card_edit_logs(
+            {
+                'page': 1,
+                'per_page': 1000,
+                'access_card_id': access_card_id,
+            }
+        )
 
         view = {
             'id': access_card.id,
