@@ -16,6 +16,7 @@ from datetime import datetime
 from datetime import timezone
 from werkzeug import exceptions
 from ..query.access_card_edit_logs import access_card_edit_logs
+from ..utils.array_to_csv_flask_response import array_to_csv_flask_response
 
 access_cards = Blueprint('access_cards', __name__)
 
@@ -225,6 +226,11 @@ def archive_access_card(access_card_id):
 @app.route("/api/accessCards", methods=["GET"])
 @jwt_required()
 def read_access_cards():
+    role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
+
+    # CSV download?
+    content_type = request.headers.get('Content-Type')
+
     # set order by
     order_by = AccessCard.card_number
     match request.args.get('orderBy'):
@@ -361,6 +367,8 @@ def read_access_cards():
 
         access_cards.append(card_obj)
 
+    if content_type == 'text/csv':
+        return array_to_csv_flask_response(access_cards)
     return jsonify(access_cards=access_cards)
 
 

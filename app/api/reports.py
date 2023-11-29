@@ -10,6 +10,7 @@ from ..query.device_access_logs import device_access_logs
 from ..query.access_card_edit_logs import access_card_edit_logs
 from ..query.user_edit_logs import user_edit_logs
 from ..query.user_access_logs import user_access_logs
+from ..utils.array_to_csv_flask_response import array_to_csv_flask_response
 
 reports = Blueprint('reports', __name__)
 
@@ -28,6 +29,7 @@ def device_access():
     action = request.args.get('action')
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
+    content_type = request.headers.get('Content-Type')
 
     try:
         params = {}
@@ -53,6 +55,8 @@ def device_access():
 
         access_logs = device_access_logs(params)
 
+        if content_type == 'text/csv':
+            return array_to_csv_flask_response(access_logs)
         return jsonify(deviceAccessLogs=access_logs)
     except ValueError as err:
         abort(422, err)
@@ -76,6 +80,7 @@ def access_card_edits():
     emerge_access_level = request.args.get('eMergeAccessLevel')
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
+    content_type = request.headers.get('Content-Type')
 
     try:
         params = {}
@@ -103,6 +108,8 @@ def access_card_edits():
 
         logs = access_card_edit_logs(params)
 
+        if content_type == 'text/csv':
+            return array_to_csv_flask_response(logs)
         return jsonify(accessCardEditLogs=logs)
     except ValueError as err:
         abort(422, err)
@@ -126,6 +133,7 @@ def user_edits():
     updated_by_user_id = request.args.get('updatedByUserId')
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
+    content_type = request.headers.get('Content-Type')
 
     try:
         params = {}
@@ -151,6 +159,8 @@ def user_edits():
 
         logs = user_edit_logs(params)
 
+        if content_type == 'text/csv':
+            return array_to_csv_flask_response(logs)
         return jsonify(userEditLogs=logs)
     except ValueError as err:
         abort(422, err)
@@ -171,6 +181,7 @@ def user_access():
     action = request.args.get('action')
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
+    content_type = request.headers.get('Content-Type')
 
     try:
         params = {}
@@ -190,6 +201,8 @@ def user_access():
 
         logs = user_access_logs(params)
 
+        if content_type == 'text/csv':
+            return array_to_csv_flask_response(logs)
         return jsonify(userAccessLogs=logs)
     except ValueError as err:
         abort(422, err)

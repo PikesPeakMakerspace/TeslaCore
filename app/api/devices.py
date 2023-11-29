@@ -18,6 +18,7 @@ from flask_jwt_extended import current_user
 from sqlalchemy import exc
 from werkzeug import exceptions
 from ..query.device_access_logs import device_access_logs
+from ..utils.array_to_csv_flask_response import array_to_csv_flask_response
 
 devices = Blueprint('devices', __name__)
 
@@ -157,6 +158,11 @@ def archive_device(device_id):
 @app.route("/api/devices", methods=["GET"])
 @jwt_required()
 def read_devices():
+    role_required([UserRoleEnum.ADMIN, UserRoleEnum.EDITOR])
+
+    # CSV download?
+    content_type = request.headers.get('Content-Type')
+
     # set order by
     order_by = Device.name
     match request.args.get('orderBy'):
@@ -225,6 +231,8 @@ def read_devices():
             'createdAt': device.created_at.isoformat()
         })
 
+    if content_type == 'text/csv':
+        return array_to_csv_flask_response(devices)
     return jsonify(devices=devices)
 
 
