@@ -24,6 +24,8 @@ checkenv:
 	@[ "${GOT_API_SECRETS}" ] || ( echo error: secrets not set, please setup 'secrets.sh'; exit 1 )
 
 run: checkenv
+	@echo "running any new database migrations"
+	flask db upgrade
 	@echo "running api server"
 	flask run
 

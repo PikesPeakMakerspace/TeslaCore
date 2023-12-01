@@ -22,8 +22,6 @@ jwt = JWTManager(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
-
-# TODO: no migrations happening yet, finish this
 migrate = Migrate(app, db)
 
 
@@ -31,7 +29,6 @@ migrate = Migrate(app, db)
 # database exists
 # TEMP: delete database after model change to recreate (not ideal, enable
 # those migrations soon)
-from app import models
 with app.app_context():
     db.create_all()
 
@@ -42,9 +39,11 @@ app.app_context().push()
 # TODO: This file getting bigger, can I break out jwt methods here?
 # Callback function to check if a JWT exists in the database blocklist
 @jwt.token_in_blocklist_loader
-def check_if_token_revoked(jwt_header, jwt_payload: dict)-> bool:
+def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
+    from app import models
     jti = jwt_payload["jti"]
-    token = db.session.query(models.TokenBlocklist.id).filter_by(jti=jti).scalar()
+    token = db.session.query(models.TokenBlocklist.id) \
+        .filter_by(jti=jti).scalar()
     return token is not None
 
 
@@ -61,6 +60,7 @@ def user_identity_lookup(user):
 # if the user has been deleted from the database).
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
+    from app import models
     identity = jwt_data["sub"]
     user = models.User.query.filter_by(id=identity).one_or_none()
     return user

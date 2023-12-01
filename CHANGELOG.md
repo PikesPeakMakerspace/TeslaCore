@@ -1,3 +1,9 @@
+## v1.11.0
+
+2023-12-01
+
+-   enable database migrations with flask-migrate
+
 ## v1.10.0
 
 2023-11-28
