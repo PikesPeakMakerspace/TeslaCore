@@ -1,9 +1,23 @@
 # TESLA Core
 
-This is a small project being used to prototype a Python REST API for a larger volunteer project. I haven't used Python all that much, especially in a web server scenario. Let's fix that here.
+TESLA Core is a REST API and database designed to manage member equipment access via card scans at Pikes Peak Makerspace (and beyond?). It's intended to improve member safety while assisting with non-profit reporting needs.
+
+Card scans are made possible with TESLA access nodes (more on that soon) with the API used by the TESLA web app (more on that soon too).
+
+## About Pikes Peak Makerspace
+
+Visit our website at: [pikespeakmakerspace.org](https://pikespeakmakerspace.org)
+
+We are a membership based, non-profit organization, that provides equipment and classes to empower our makers, skilled or novice, to turn their passionate ideas into physical things. Whatever project you have in mind, you can make it here!
+
+### Our Mission
+
+Pikes Peak Makerspace is a community of cooperative hobbyists and early-stage entrepreneurs that empowers members to turn ideas into reality. We strive to provide access to tools and resources to confidently and safely design, develop, and make.
 
 ## Setup
+
 in a linux terminal clone and enter the directory with the source code
+
 ```
 cd TeslaCore
 ```
@@ -21,39 +35,62 @@ apt install python3.10-venv
 ```
 
 Install the required packages using the make target
+
 ```
 make env
 ```
 
 Setup the secrets (such as `TESLA_JWT_SECRET_KEY`) and place in the file `secrets.sh`
 Set system environment variables for the flask app and activate virtual environment
+
 ```
 source env.sh
 ```
 
 Run the app using the make target
+
 ```
 make run
 ```
 
 ## Repeated Setup
+
 Source the environment
+
 ```
 source env.sh
 ```
 
 Run the app
+
 ```
 make run
 ```
 
+## Making Database Structure Changes
+
+After making changes to database models (models.py), those changes will need to be reflected in the database. To do this, run the following command to generate a migration script :
+
+```
+flask db migrate -m "Add a useful description for the migration here."
+```
+
+Then after reviewing the migration file in `/migrations/versions` (need to review as it may not catch everything), run the following command to apply the migration to the database:
+
+```
+flask db upgrade
+```
+
+For more information on database migrations, see the [Flask-Migrate documentation](https://flask-migrate.readthedocs.io/en/latest/).
 
 ## Random Notes
 
 TODO: Figure this out for the app and document it here:
 
 ```
+
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+
 ```
 
 werkzeug==2.3.0 was installed as a url_decode function in flask was deprecated, latest version not available just yet. Consider updating when possible and/or dig further on this.
@@ -73,5 +110,10 @@ https://medium.com/paperplanetechworks/api-architecture-11-design-best-practices
 User role needs/protection for endpoints:
 https://pythonhosted.org/Flask-Principal/
 
-## Contribution Rules
+## Contribution Rules (work in progress)
+
 edits to markdown can happen directly in main, all other changes happen in feature branches
+
+```
+
+```
