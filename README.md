@@ -40,7 +40,14 @@ Install the required packages using the make target
 make env
 ```
 
-Setup the secrets (such as `TESLA_JWT_SECRET_KEY`) and place in the file `secrets.sh`
+Copy secret.sh.example to secret.sh and customize the values for your environment.
+
+```
+cp secret.sh.example secret.sh
+nano secret.sh
+# Change the default to something else!
+```
+
 Set system environment variables for the flask app and activate virtual environment
 
 ```
@@ -117,3 +124,9 @@ edits to markdown can happen directly in main, all other changes happen in featu
 ```
 
 ```
+
+## Database Migration Issue Resolution
+
+I was running into a "multiple heads" issue while making lots of changes. Keep this in mind if you run into the same issue:
+https://www.arundhaj.com/blog/multiple-head-revisions-present-error-flask-migrate.html
+https://blog.jerrycodes.com/multiple-heads-in-alembic-migrations/

@@ -438,27 +438,6 @@ def read_access_card_view(access_card_id):
         abort(500, 'an unknown error occurred')
 
 
-# get access card assignment access logs
-@app.route("/api/accessCards/<access_card_id>/logs", methods=["GET"])
-@jwt_required()
-def read_access_card_logs(access_card_id):
-    if (not access_card_id):
-        abort(422, 'missing access card id e.g. /api/accessCards/NODE-ID')
-
-    try:
-        # find
-        access_card = AccessCard.query.filter_by(id=access_card_id).first()
-
-        if not access_card:
-            abort(404, 'unable to find a access card with that id')
-
-        # TODO: create this as part of logs task, this may move to logs.py
-
-        return jsonify(logs='TODO')
-    except Exception:
-        abort(500, 'an unknown error occurred')
-
-
 # assign access card to user
 @app.route("/api/accessCards/<access_card_id>/assign", methods=["POST"])
 @jwt_required()

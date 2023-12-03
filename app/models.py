@@ -1,5 +1,5 @@
 import uuid
-from .app import db
+from .database import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Enum
 from sqlalchemy.sql import func

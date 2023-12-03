@@ -123,7 +123,6 @@ def update_device(device_id):
         abort(500, 'an unknown error occurred')
 
 
-# TODO: Consider removing references from other tables once those exist
 # archive a device
 @app.route("/api/devices/<device_id>", methods=["DELETE"])
 @jwt_required()
