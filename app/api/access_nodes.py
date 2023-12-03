@@ -304,30 +304,6 @@ def read_access_node_view(access_node_id):
         abort(500, 'an unknown error occurred')
 
 
-# get access node-centric access logs
-# example: access node could have had devices assigned at different times,
-# yet people care about how many people use the device, not the node (unless
-# curious about the node itself specifically, see this report)
-@app.route("/api/accessNodes/<access_node_id>/logs", methods=["GET"])
-@jwt_required()
-def read_access_node_logs(access_node_id):
-    if (not access_node_id):
-        abort(422, 'missing access node id e.g. /api/accessNodes/NODE-ID')
-
-    try:
-        # find
-        access_node = AccessNode.query.filter_by(id=access_node_id).first()
-
-        if not access_node:
-            abort(404, 'unable to find a access node with that id')
-
-        # TODO: finish this one after node responses are known
-
-        return jsonify(logs='TODO')
-    except Exception:
-        abort(500, 'an unknown error occurred')
-
-
 # manually scan an access card (override, requires admin jwt auth for now)
 @app.route("/api/accessNodes/<access_node_id>/scan", methods=["POST"])
 @jwt_required()
