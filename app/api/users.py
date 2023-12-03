@@ -59,8 +59,6 @@ def create_user():
             abort(422, 'invalid role')
 
     # validate optional emerge_access_level parameter
-    # TODO: consider breaking this out to its own linked table is this is very
-    # specific to PPM
     if (emerge_access_level):
         valid_access_level = emerge_access_level in \
             [e.value for e in UserEmergeAccessLevelEnum]
@@ -141,8 +139,6 @@ def update_user(user_id):
             abort(422, 'invalid role')
 
     # validate optional emerge_access_level parameter
-    # TODO: consider breaking this out to its own linked table is this is very
-    # specific to PPM
     if (emerge_access_level):
         valid_access_level = emerge_access_level in \
             [e.value for e in UserEmergeAccessLevelEnum]

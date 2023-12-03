@@ -5,3 +5,4 @@ werkzeug==2.3.0
 flask-migrate
 flask_jwt_extended
 pandas
+apscheduler
