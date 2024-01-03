@@ -44,7 +44,20 @@ def register():
     if user:
         return jsonify(message="username already in use"), 401
 
-    # TODO: Better improve this so this doesn't get spammed with new users.
+    # TEMPORARY
+    # Only allow one/the first user register as an admin until there's
+    # a need to allow multiple users e.g. members to register. For now
+    # there's nothing in place to validate or need registrations, yet
+    # it's good to have a unique user/pass for the first admin.
+    user = User.query.first()
+    if user:
+        return jsonify(
+            message="A user is already registered. For now until there's a \
+need, only the first user can register. Create new users \
+instead in admin."
+            ), 401
+    # END TEMPORARY
+
     # Need captcha, email verification, etc.
     new_user = User(
             username=username,

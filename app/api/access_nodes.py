@@ -75,6 +75,8 @@ def create_access_node():
 
 
 # update an access node
+# TODO: Once MQTT is available, send status update message there as well if
+# there's a change.
 @app.route("/api/accessNodes/<access_node_id>", methods=["PUT"])
 @jwt_required()
 def update_access_node(access_node_id):
@@ -84,6 +86,7 @@ def update_access_node(access_node_id):
     name = request.json.get("name", None).strip()
     mac_address = request.json.get("macAddress", None).strip()
     device_id = request.json.get("deviceId", None).strip()
+    status = request.json.get("status", None).strip()
 
     if (not access_node_id):
         abort(422, 'missing device id e.g. /api/accessNodes/NODE-ID')
@@ -102,6 +105,12 @@ def update_access_node(access_node_id):
         if not device:
             abort(404, 'unable to find a device with that id to assign')
 
+    # validate status if assigned
+    if (status):
+        valid_status = status in [e.value for e in AccessNodeStatusEnum]
+        if not valid_status:
+            abort(422, 'invalid status')
+
     try:
         # find
         access_node = AccessNode.query.filter_by(id=access_node_id).first()
@@ -110,11 +119,16 @@ def update_access_node(access_node_id):
             abort(404, 'unable to find an access node with that id')
 
         # update
-        # TODO: do we want to manually update status here?
-        access_node.type = type
-        access_node.name = name
-        access_node.mac_address = mac_address
-        access_node.device_id = device_id
+        if type:
+            access_node.type = type
+        if name:
+            access_node.name = name
+        if mac_address:
+            access_node.mac_address = mac_address
+        if device_id:
+            access_node.device_id = device_id
+        if status:
+            access_node.status = status
         db.session.commit()
 
         # return the latest data in database
@@ -151,8 +165,6 @@ def archive_access_node(access_node_id):
         # archive access node
         access_node.status = AccessNodeStatusEnum.ARCHIVED
         db.session.commit()
-
-        # TODO: clear any device assignments to node
 
         return jsonify(message='access node archived')
     except exceptions.NotFound as err:
@@ -219,8 +231,8 @@ def read_access_nodes():
         print(page)
 
     # TODO: consider a server default config, also for a max page count
-    per_page = 20
-    max_per_page = 100
+    per_page = app.config['DEFAULT_PER_PAGE']
+    max_per_page = app.config['DEFAULT_MAX_PER_PAGE']
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
 
@@ -281,7 +293,7 @@ def read_access_node_view(access_node_id):
 
         access_logs = device_access_logs(
             {
-                'per_page': 100,
+                'per_page': app.config['DEFAULT_PER_PAGE'],
                 'access_node_id': access_node_id,
             }
         )
@@ -310,8 +322,6 @@ def read_access_node_view(access_node_id):
 def scan_access_node(access_node_id):
     role_required([UserRoleEnum.ADMIN])
 
-    # TODO: consider just setting a user_id here, modeling card scan
-    # as REST to start
     access_card_number = request.json.get("accessCardNumber", None)
     action = request.json.get("action", None).strip()
 

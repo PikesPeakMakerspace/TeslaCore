@@ -1,8 +1,6 @@
 import enum
 
 
-# TODO: Discuss: This assumes single role per user. Should we consider a list
-# of roles per user? (and how would we go about that if relevant?)
 class UserRoleEnum(str, enum.Enum):
     UNVERIFIED = 'unverified'
     USER = 'user'
@@ -43,9 +41,18 @@ class UserAccessActionEnum(str, enum.Enum):
 
 class AccessNodeStatusEnum(str, enum.Enum):
     OFFLINE = 'offline'
-    AVAILABLE = 'available'
+    # 0 waiting for card read, tool is off
+    IDLE = 'idle'
+    # 1 card read, validated, tool is allowed to be turned on
+    ENABLED = 'enabled'
+    # 2 tool is turned on (if we can track for specific machine)
     IN_USE = 'in use'
+    # 3 node error
     ERROR = 'error'
+    # 4 not in use currently e.g. long-run 3D printing job is finished
+    END_OF_RUN = 'end of run'
+    # -1 machine is locked e.g. makerspace emergency, not common
+    LOCKDOWN = 'lockdown'
     ARCHIVED = 'archived'
 
 
@@ -57,8 +64,6 @@ class AccessNodeScanActionEnum(str, enum.Enum):
 
 
 class DeviceTypeEnum(str, enum.Enum):
-    # TODO: "machine" may be too generalized, make a new enum value for each
-    # unique configuration a tesla node needs to work through
     MACHINE = 'machine'
     DOOR = 'door'
 

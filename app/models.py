@@ -13,7 +13,6 @@ def uuid_str():
     return str(uuid.uuid4())
 
 
-# TODO: Cleanup script needed for tokens older than x days
 class TokenBlocklist(db.Model):
     id = db.Column(
         db.String(36),
