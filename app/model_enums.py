@@ -40,7 +40,8 @@ class UserAccessActionEnum(str, enum.Enum):
     LOGIN = 'login'
     LOGOUT = 'logout'
 
-# TODO: working out these statuses from nodes and will update here after discussion:
+# TODO: working out these statuses from nodes and will update here after
+# discussion:
     # -1 (lockdown),
     # 0 (idle)
     # 1 (enabled)
