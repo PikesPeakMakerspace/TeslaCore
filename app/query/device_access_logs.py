@@ -1,4 +1,5 @@
 from ..app import db
+from ..app import app
 from ..models import Device, User, AccessNodeLog, AccessNodeScanActionEnum
 from datetime import datetime
 
@@ -14,7 +15,7 @@ def validate_date(date_string):
 
 default_params = {
     'page': 1,
-    'per_page': 1000,
+    'per_page': app.config['DEFAULT_PER_PAGE'],
     # optional user id string
     'user_id': None,
     # optional access card id string
@@ -123,7 +124,7 @@ def device_access_logs(params):
         .paginate(
             page=page,
             per_page=per_page,
-            max_per_page=10000,
+            max_per_page=app.config['DEFAULT_MAX_PER_PAGE'],
             error_out=False
         )
 

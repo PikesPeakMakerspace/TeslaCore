@@ -300,8 +300,8 @@ def read_users():
         print(page)
 
     # TODO: consider a server default config, also for a max page count
-    per_page = 20
-    max_per_page = 100
+    per_page = app.config['DEFAULT_PER_PAGE']
+    max_per_page = app.config['DEFAULT_MAX_PER_PAGE']
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
 
@@ -410,7 +410,7 @@ def read_user_view(user_id):
 
         access_logs = device_access_logs(
             {
-                'per_page': 100,
+                'per_page': app.config['DEFAULT_PER_PAGE'],
                 'user_id': user_id,
             }
         )
