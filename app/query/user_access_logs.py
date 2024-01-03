@@ -1,4 +1,5 @@
 from ..app import db
+from ..app import app
 from ..models import User, UserAccessLog
 from ..model_enums import UserAccessActionEnum
 from .device_access_logs import validate_date
@@ -6,7 +7,7 @@ from .device_access_logs import validate_date
 
 default_params = {
     'page': 1,
-    'per_page': 1000,
+    'per_page': app.config['DEFAULT_PER_PAGE'],
     # updated_by_user_id
     'user_id': None,
     # optional UserAccessActionEnum
@@ -86,7 +87,7 @@ def user_access_logs(params):
         .paginate(
             page=page,
             per_page=per_page,
-            max_per_page=10000,
+            max_per_page=app.config['DEFAULT_MAX_PER_PAGE'],
             error_out=False
         )
 

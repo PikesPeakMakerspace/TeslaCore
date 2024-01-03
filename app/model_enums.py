@@ -40,6 +40,15 @@ class UserAccessActionEnum(str, enum.Enum):
     LOGIN = 'login'
     LOGOUT = 'logout'
 
+# TODO: working out these statuses from nodes and will update here after
+# discussion:
+    # -1 (lockdown),
+    # 0 (idle)
+    # 1 (enabled)
+    # 2 (in use, i.e. power on)
+    # 3 (error),
+    # 4 (end of run)
+
 
 class AccessNodeStatusEnum(str, enum.Enum):
     OFFLINE = 'offline'

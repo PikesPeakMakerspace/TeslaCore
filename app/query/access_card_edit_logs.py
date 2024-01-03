@@ -1,4 +1,5 @@
 from ..app import db
+from ..app import app
 from ..models import User, AccessCardLog, AccessCardStatusEnum, \
     UserEmergeAccessLevelEnum
 from .device_access_logs import validate_date
@@ -7,7 +8,7 @@ from sqlalchemy.orm import aliased
 
 default_params = {
     'page': 1,
-    'per_page': 1000,
+    'per_page': app.config['DEFAULT_PER_PAGE'],
     # optional user id string
     'assigned_to_user_id': None,
     # optional user id string
@@ -136,7 +137,7 @@ def access_card_edit_logs(params):
         .paginate(
             page=page,
             per_page=per_page,
-            max_per_page=10000,
+            max_per_page=app.config['DEFAULT_MAX_PER_PAGE'],
             error_out=False
         )
 
