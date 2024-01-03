@@ -1,3 +1,16 @@
+## v1.12.0
+
+2024-01-13
+
+-   only allow one registration for now: the first admin user until there's a need for more public-facing registrations (additional users can be created via user create endpoint)
+-   add app configured default per_page and max_per_page
+-   add status to access node updates, make all parameters optional
+-   clear device node and user assignments on device archive
+-   add filtering device list by user id
+-   set assigned access cards to inactive when user updated to not active
+-   unassign cards when archiving user
+-   update access node statuses to fit with nodes in use now
+
 ## v1.11.0
 
 2023-12-01
