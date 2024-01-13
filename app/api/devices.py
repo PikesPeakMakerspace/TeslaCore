@@ -143,8 +143,19 @@ def archive_device(device_id):
         device.status = DeviceStatusEnum.ARCHIVED
         db.session.commit()
 
-        # TODO: clear any node to device
-        # TODO: clear user assignments to device
+        # clear device from assigned node
+        node = AccessNode.query.filter(
+            AccessNode.device_id == device.id
+        ).first()
+        if node:
+            node.device_id = None
+            db.session.commit()
+
+        # clear user assignments to device
+        UserDevice.query.filter(
+            UserDevice.device_id == device.id
+        ).delete()
+        db.session.commit()
 
         return jsonify(message='device archived')
     except exceptions.NotFound:
@@ -188,6 +199,12 @@ def read_devices():
         if (valid_status):
             query = query.filter(Device.status == request.args.get('status'))
 
+    # filter by user id
+    if request.args.get('userId'):
+        query = query.join(
+            UserDevice, UserDevice.device_id == Device.id, isouter=True
+        ).filter(UserDevice.assigned_to_user_id == request.args.get('userId'))
+
     # hide archived if no status set
     if not request.args.get('status'):
         query = query.filter(Device.status != DeviceStatusEnum.ARCHIVED)
@@ -206,8 +223,8 @@ def read_devices():
         print(page)
 
     # TODO: consider a server default config, also for a max page count
-    per_page = 20
-    max_per_page = 100
+    per_page = app.config['DEFAULT_PER_PAGE']
+    max_per_page = app.config['DEFAULT_MAX_PER_PAGE']
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
 
@@ -286,7 +303,7 @@ def read_device_view(device_id):
 
         access_logs = device_access_logs(
             {
-                'per_page': 100,
+                'per_page': app.config['DEFAULT_PER_PAGE'],
                 'device_id': device_id,
             }
         )

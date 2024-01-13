@@ -21,6 +21,25 @@ from ..utils.array_to_csv_flask_response import array_to_csv_flask_response
 access_cards = Blueprint('access_cards', __name__)
 
 
+# log access card change
+def log_access_card_change(
+        access_card_id,
+        assigned_by_user_id,
+        assigned_to_user_id,
+        status,
+        emerge_access_level
+        ):
+    access_card_log = AccessCardLog(
+        access_card_id=access_card_id,
+        assigned_by_user_id=assigned_by_user_id,
+        assigned_to_user_id=assigned_to_user_id,
+        status=status,
+        emerge_access_level=emerge_access_level
+    )
+    db.session.add(access_card_log)
+    db.session.commit()
+
+
 # create a new access card
 @app.route("/api/accessCards", methods=["POST"])
 @jwt_required()
@@ -66,13 +85,13 @@ def create_access_card():
         db.session.refresh(access_card)
 
         # log access card change
-        access_card_log = AccessCardLog(
-            access_card_id=access_card.id,
-            assigned_by_user_id=current_user.id,
-            status=access_card.status
+        log_access_card_change(
+            access_card.id,
+            current_user.id,
+            None,
+            access_card.status,
+            None
         )
-        db.session.add(access_card_log)
-        db.session.commit()
 
         return jsonify(
             id=access_card.id,
@@ -151,15 +170,13 @@ def update_access_card(access_card_id):
                 .emerge_access_level
         except AttributeError:
             emerge_access_level = None
-        access_card_log = AccessCardLog(
-            access_card_id=access_card.id,
-            assigned_to_user_id=assigned_to_user_id,
-            assigned_by_user_id=current_user.id,
-            status=access_card.status,
-            emerge_access_level=emerge_access_level
+        log_access_card_change(
+            access_card.id,
+            current_user.id,
+            assigned_to_user_id,
+            access_card.status,
+            emerge_access_level
         )
-        db.session.add(access_card_log)
-        db.session.commit()
 
         return jsonify(
             id=access_card.id,
@@ -204,15 +221,13 @@ def archive_access_card(access_card_id):
             db.session.commit()
 
         # log access card change
-        access_card_log = AccessCardLog(
-            access_card_id=access_card.id,
-            assigned_to_user_id=None,
-            assigned_by_user_id=current_user.id,
-            status=access_card.status,
-            emerge_access_level=None
+        log_access_card_change(
+            access_card.id,
+            current_user.id,
+            None,
+            access_card.status,
+            None
         )
-        db.session.add(access_card_log)
-        db.session.commit()
 
         return jsonify(message='access card archived')
 
@@ -305,8 +320,8 @@ def read_access_cards():
         print(page)
 
     # TODO: consider a server default config, also for a max page count
-    per_page = 20
-    max_per_page = 100
+    per_page = app.config['DEFAULT_PER_PAGE']
+    max_per_page = app.config['DEFAULT_MAX_PER_PAGE']
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
 
@@ -413,7 +428,7 @@ def read_access_card_view(access_card_id):
         assignment_log = access_card_edit_logs(
             {
                 'page': 1,
-                'per_page': 1000,
+                'per_page': app.config['DEFAULT_PER_PAGE'],
                 'access_card_id': access_card_id,
             }
         )
@@ -493,15 +508,13 @@ def assign_access_card(access_card_id):
         db.session.commit()
 
         # log access card change
-        access_card_log = AccessCardLog(
-            access_card_id=access_card.id,
-            assigned_to_user_id=user_access_card.assigned_to_user_id,
-            assigned_by_user_id=user_access_card.assigned_by_user_id,
-            status=access_card.status,
-            emerge_access_level=user.emerge_access_level
+        log_access_card_change(
+            access_card.id,
+            user_access_card.assigned_by_user_id,
+            user_access_card.assigned_to_user_id,
+            access_card.status,
+            user.emerge_access_level
         )
-        db.session.add(access_card_log)
-        db.session.commit()
 
         return jsonify(message='access card assigned')
     except exceptions.Conflict as err:
@@ -566,15 +579,13 @@ def unassign_access_card(access_card_id):
             db.session.commit()
 
         # log access card change
-        access_card_log = AccessCardLog(
-            access_card_id=access_card.id,
-            assigned_to_user_id=user_access_card.assigned_to_user_id,
-            assigned_by_user_id=user_access_card.assigned_by_user_id,
-            status=access_card.status,
-            emerge_access_level=user.emerge_access_level
+        log_access_card_change(
+            access_card.id,
+            user_access_card.assigned_by_user_id,
+            user_access_card.assigned_to_user_id,
+            access_card.status,
+            user.emerge_access_level
         )
-        db.session.add(access_card_log)
-        db.session.commit()
 
         return jsonify(message='access card unassigned')
     except exceptions.Conflict as err:
