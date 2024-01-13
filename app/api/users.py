@@ -1,7 +1,7 @@
 from ..models import User, UserEditLog, AccessCard, UserAccessCard, Device, \
     UserDevice
 from ..model_enums import UserRoleEnum, UserStatusEnum, \
-    UserEmergeAccessLevelEnum
+    UserEmergeAccessLevelEnum, AccessCardStatusEnum
 from ..app import db
 from ..app import app
 from ..role_required import role_required
@@ -18,6 +18,7 @@ from werkzeug import exceptions
 from sqlalchemy.orm import aliased
 from ..query.device_access_logs import device_access_logs
 from ..utils.array_to_csv_flask_response import array_to_csv_flask_response
+from .access_cards import log_access_card_change
 
 users = Blueprint('users', __name__)
 
@@ -33,6 +34,27 @@ def write_user_update_log(user):
     )
     db.session.add(userEditLog)
     db.session.commit()
+
+
+# set one or more access cards assigned to a user to inactive status
+def set_user_access_card_to_inactive(user_id):
+    cards = AccessCard.query.join(
+        UserAccessCard,
+        UserAccessCard.access_card_id == AccessCard.id,
+        isouter=True
+    ).filter(UserAccessCard.assigned_to_user_id == user_id).all()
+
+    for card in cards:
+        # card = AccessCard.query.filter_by(id=result.id).first()
+        card.status = AccessCardStatusEnum.INACTIVE
+        db.session.commit()
+        log_access_card_change(
+            card.id,
+            current_user.id,
+            None,
+            AccessCardStatusEnum.INACTIVE,
+            None,
+        )
 
 
 # create a new user
@@ -176,8 +198,9 @@ def update_user(user_id):
             user.status = status
         db.session.commit()
 
-        # TODO: if not ACTIVE status, update card status to match (INACTIVE,
-        # SUSPENDED, ARCHIVED)
+        # if not active status, update card(s) status to inactive
+        if user.status != UserStatusEnum.ACTIVE:
+            set_user_access_card_to_inactive(user.id)
 
         db.session.refresh(user)
 
@@ -225,8 +248,20 @@ def archive_user(user_id):
         # write to user update log
         write_user_update_log(user)
 
-        # TODO: update card status to _____
-        # TODO: remove device assignments
+        # set any assigned card(s) to inactive
+        set_user_access_card_to_inactive(user.id)
+
+        # remove card assignments
+        UserAccessCard.query.filter(
+            UserAccessCard.assigned_to_user_id == user.id
+        ).delete()
+        db.session.commit()
+
+        # remove device assignments
+        UserDevice.query.filter(
+            UserDevice.assigned_to_user_id == user.id
+        ).delete()
+        db.session.commit()
 
         return jsonify(message='user archived')
     except exceptions.NotFound:
@@ -300,8 +335,8 @@ def read_users():
         print(page)
 
     # TODO: consider a server default config, also for a max page count
-    per_page = 20
-    max_per_page = 100
+    per_page = app.config['DEFAULT_PER_PAGE']
+    max_per_page = app.config['DEFAULT_MAX_PER_PAGE']
     if (request.args.get('perPage')):
         per_page = int(request.args.get('perPage'))
 
@@ -410,7 +445,7 @@ def read_user_view(user_id):
 
         access_logs = device_access_logs(
             {
-                'per_page': 100,
+                'per_page': app.config['DEFAULT_PER_PAGE'],
                 'user_id': user_id,
             }
         )

@@ -1,5 +1,3 @@
-# TODO: log errors to file
-
 import os
 from datetime import timedelta
 from flask import Flask
@@ -28,6 +26,9 @@ migrate = Migrate(app, db)
 
 # this is needed for defs like role_required() to work
 app.app_context().push()
+
+app.config['DEFAULT_PER_PAGE'] = 20
+app.config['DEFAULT_MAX_PER_PAGE'] = 100
 
 
 @jwt.token_in_blocklist_loader
