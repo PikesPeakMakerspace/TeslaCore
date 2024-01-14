@@ -27,6 +27,12 @@ run: checkenv
 	@echo "running any new database migrations"
 	flask db upgrade
 	@echo "running api server"
+	waitress-serve --host 127.0.0.1 app.app:app
+
+dev: checkenv
+	@echo "running any new database migrations"
+	flask db upgrade
+	@echo "running api server"
 	flask run
 
 help:
@@ -34,6 +40,7 @@ help:
 	@echo "  help: show this help menu"
 	@echo "  env: setup python venv"
 	@echo "  run: run flask api server"
+	@echo "  dev: run flask api server in debug mode"
 	@echo
 	@echo "variables:"
 	@echo "  PYTHON               $(PYTHON)"
