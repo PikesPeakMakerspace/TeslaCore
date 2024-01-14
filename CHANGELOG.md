@@ -1,3 +1,10 @@
+## v1.13.0
+
+2024-01-14
+
+-   Run flask via waitress in production with `make run`
+-   Run flask via development server with debug mode with `make dev`
+
 ## v1.12.0
 
 2024-01-13

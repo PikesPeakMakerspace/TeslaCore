@@ -1,7 +1,6 @@
 import os
 from datetime import timedelta
-from flask import Flask
-from flask import Response
+from flask import Flask, Response
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from json import dumps
