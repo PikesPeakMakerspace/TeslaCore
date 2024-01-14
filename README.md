@@ -54,7 +54,13 @@ Set system environment variables for the flask app and activate virtual environm
 source env.sh
 ```
 
-Run the app using the make target
+Run the app for local development in debug mode using the make target
+
+```
+make dev
+```
+
+When running in production, use:
 
 ```
 make run
@@ -68,10 +74,10 @@ Source the environment
 source env.sh
 ```
 
-Run the app
+Run the app for local development
 
 ```
-make run
+make dev
 ```
 
 ## Making Database Structure Changes
