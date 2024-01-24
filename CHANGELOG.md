@@ -1,11 +1,18 @@
-## v1.13.0
+## v1.0.1
+
+2024-01-23
+
+-   Add OpenAPI documentation
+-   Resolve API issues found with OpenAPI documentation
+
+## v1.0.0
 
 2024-01-14
 
 -   Run flask via waitress in production with `make run`
 -   Run flask via development server with debug mode with `make dev`
 
-## v1.12.0
+## v0.12.0
 
 2024-01-13
 
@@ -18,70 +25,70 @@
 -   unassign cards when archiving user
 -   update access node statuses to fit with nodes in use now
 
-## v1.11.0
+## v0.11.0
 
 2023-12-01
 
 -   enable database migrations with flask-migrate
 
-## v1.10.0
+## v0.10.0
 
 2023-11-28
 
 -   add reporting endpoints
 
-## v1.9.0
+## v0.9.0
 
 2023-11-25
 
 -   fill in additional profile data for users, access nodes, devices
 -   add an access node "scan" endpoint for access node manual overrides and testing
 
-## v1.8.0
+## v0.8.0
 
 2023-11-24
 
 -   add device user assignments and assignment logging
 
-## v1.7.0
+## v0.7.0
 
 2023-11-23
 
 -   add access card user assignments
 
-## v1.6.0
+## v0.6.0
 
 2023-11-16
 
 -   add user endpoints
 
-## v1.5.0
+## v0.5.0
 
 2023-11-16
 
 -   local secrets file
 -   support secrets in GitHub actions
 
-## v1.4.0
+## v0.4.0
 
 2023-11-09
 
 -   set device status with create and edit
 
-## v1.3.0
+## v0.3.0
 
 2023-11-09
 
 -   revise data model to accommodate access card system requirements
 -   add access card endpoints
 
-## v1.2.0
+## v0.2.0
 
 2023-11-09
 
 -   add access node endpoints
 
-## v1.1.0
+## v0.1.0
 
 2023-11-09
 
@@ -89,13 +96,13 @@
 -   placeholder device log endpoint
 -   models formatting, cleanup
 
-## v1.0.1
+## v0.0.1
 
 2023-11-09
 
 -   created github actions
 
-## v.1.0.0
+## v0.0.0
 
 2023-11-09
 

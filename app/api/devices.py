@@ -83,15 +83,13 @@ def update_device(device_id):
     if (not device_id):
         abort(422, 'missing device id e.g. /api/devices/DEVICE-ID')
 
-    if (not type or not name):
-        abort(422, 'missing type or name')
-
-    valid_type = type in [e.value for e in DeviceTypeEnum]
-    if (not valid_type):
-        abort(422, 'invalid type')
+    if type:
+        valid_type = type in [e.value for e in DeviceTypeEnum]
+        if (not valid_type):
+            abort(422, 'invalid type')
 
     # validate optional status parameter
-    if (status):
+    if status:
         valid_status = status in [e.value for e in DeviceStatusEnum]
         if (not valid_status):
             abort(422, 'invalid status')
@@ -104,9 +102,12 @@ def update_device(device_id):
             abort(404, 'unable to find a device with that id')
 
         # update
-        device.type = type
-        device.name = name
-        device.status = status
+        if type:
+            device.type = type
+        if name:
+            device.name = name
+        if status:
+            device.status = status
         db.session.commit()
 
         # return the latest data in database
@@ -280,7 +281,7 @@ def read_device_view(device_id):
                 'last_accessed_user_id': access_node.last_accessed_user_id,
                 'last_accessed_at': access_node.last_accessed_at,
                 'device_id': access_node.device_id,
-                'created_at': access_node.created_at
+                'created_at': access_node.created_at.isoformat()
             }
 
         # users with access to device

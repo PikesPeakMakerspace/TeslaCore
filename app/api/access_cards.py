@@ -123,9 +123,6 @@ def update_access_card(access_card_id):
     if (not access_card_id):
         abort(422, 'missing access card id e.g. /api/accessCards/CARD-ID')
 
-    if (not card_number):
-        abort(422, 'missing cardNumber')
-
     # validate optional status if assigned
     if (status):
         valid_status = status in [e.value for e in AccessCardStatusEnum]
@@ -139,10 +136,14 @@ def update_access_card(access_card_id):
             abort(404, 'unable to find an access card with that id')
 
         # update
-        access_card.card_number = card_number
-        access_card.facility_code = facility_code
-        access_card.card_type = card_type
-        access_card.status = status
+        if card_number:
+            access_card.card_number = card_number
+        if facility_code:
+            access_card.facility_code = facility_code
+        if card_type:
+            access_card.card_type = card_type
+        if status:
+            access_card.status = status
         access_card.last_updated_by_user_id = current_user.id
         access_card.last_updated_at = datetime.now(timezone.utc)
         db.session.commit()
@@ -249,6 +250,8 @@ def read_access_cards():
     # set order by
     order_by = AccessCard.card_number
     match request.args.get('orderBy'):
+        case 'cardNumber':
+            order_by = AccessCard.card_number
         case 'date':
             order_by = AccessCard.created_at
         case 'updatedDate':
@@ -536,7 +539,7 @@ def unassign_access_card(access_card_id):
     if (not access_card_id):
         abort(
             422,
-            'missing access card id e.g. /api/accessCards/CARD-ID/assign'
+            'missing access card id e.g. /api/accessCards/CARD-ID/unassign'
         )
 
     if (not user_id):

@@ -53,7 +53,7 @@ def register():
     if user:
         return jsonify(
             message="A user is already registered. For now until there's a \
-need, only the first user can register. Create new users \
+need, only the first admin user can register. Create new users \
 instead in admin."
             ), 401
     # END TEMPORARY
@@ -113,7 +113,7 @@ def login():
     db.session.add(log)
     db.session.commit()
 
-    return jsonify(access_token=access_token, refresh_token=refresh_token)
+    return jsonify(accessToken=access_token, refreshToken=refresh_token)
 
 
 # We are using the `refresh=True` options in jwt_required to only allow
@@ -124,7 +124,7 @@ def refresh():
     userId = get_jwt_identity()
     user = User.query.filter_by(id=userId).one_or_none()
     access_token = create_access_token(identity=user)
-    return jsonify(access_token=access_token)
+    return jsonify(accessToken=access_token)
 
 
 # Endpoint for revoking the current users access token. Saved the unique
@@ -141,7 +141,7 @@ def modify_token():
     db.session.commit()
 
     # refresh token in POST body
-    refreshTokenJwt = request.json.get("refresh_token", None)
+    refreshTokenJwt = request.json.get("refreshToken", None)
     if refreshTokenJwt:
         refreshTokenDecoded = jwt.decode(
             refreshTokenJwt,

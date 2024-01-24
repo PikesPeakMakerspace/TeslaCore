@@ -14,6 +14,10 @@ We are a membership based, non-profit organization, that provides equipment and 
 
 Pikes Peak Makerspace is a community of cooperative hobbyists and early-stage entrepreneurs that empowers members to turn ideas into reality. We strive to provide access to tools and resources to confidently and safely design, develop, and make.
 
+## API Documentation
+
+Checkout the [OpenAPI documentation here](https://pikespeakmakerspace.github.io/TeslaCore/) for the Tesla Core API.
+
 ## Setup
 
 in a linux terminal clone and enter the directory with the source code
