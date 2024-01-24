@@ -85,7 +85,7 @@ def create_user():
         valid_access_level = emerge_access_level in \
             [e.value for e in UserEmergeAccessLevelEnum]
         if (not valid_access_level):
-            abort(422, 'invalid emerge_access_level')
+            abort(422, 'invalid eMergeAccessLevel')
 
     # validate optional status parameter
     if (status):
@@ -132,7 +132,7 @@ def create_user():
             lastUpdatedByUserId=user.last_updated_by_user_id,
         )
     except exc.IntegrityError:
-        abort(409, 'a user with that name already exists')
+        abort(409, 'a user with that username already exists')
     except Exception:
         abort(500, 'an unknown error occurred')
 
@@ -150,9 +150,6 @@ def update_user(user_id):
     emerge_access_level = request.json.get("eMergeAccessLevel", None).strip()
     password = request.json.get("password", None).strip()
     status = request.json.get("status", None).strip()
-
-    if (not username):
-        abort(422, 'missing username')
 
     # validate optional role parameter
     if (role):
@@ -181,9 +178,10 @@ def update_user(user_id):
             abort(404, 'unable to find a user with that id')
 
         # update
-        user.username = username
         user.last_updated_by_user_id = current_user.id
         user.last_updated_at = datetime.now(timezone.utc)
+        if username:
+            user.username = username
         if (password):
             user.password = password
         if (first_name):
@@ -386,7 +384,6 @@ def read_user_view(user_id):
         if not user:
             abort(404, 'unable to find a user with that id')
 
-        access_card = {}
         lastUpdatedByUser = aliased(User)
         access_card_results = db.session.query(
             AccessCard.id,
@@ -409,23 +406,26 @@ def read_user_view(user_id):
                 lastUpdatedByUser,
                 AccessCard.last_updated_by_user_id == lastUpdatedByUser.id
             ) \
-            .first()
+            .all()
+
+        access_cards = []
         if access_card_results:
-            access_card = {
-                'id': access_card_results.id,
-                'cardNumber': access_card_results.card_number,
-                'cardType':  access_card_results.card_type,
-                'facilityCode': access_card_results.facility_code,
-                'status': access_card_results.status,
-                'lastUpdatedAt':
-                    access_card_results.last_updated_at.isoformat(),
-                'lastUpdatedByUserId':
-                    access_card_results.last_updated_by_user_id,
-                'lastUpdatedByFirstName':
-                    access_card_results.last_updated_by_first_name,
-                'lastUpdatedByLastName':
-                    access_card_results.last_updated_by_last_name,
-            }
+            for access_card_result in access_card_results:
+                access_cards.append({
+                    'id': access_card_result.id,
+                    'cardNumber': access_card_result.card_number,
+                    'cardType':  access_card_result.card_type,
+                    'facilityCode': access_card_result.facility_code,
+                    'status': access_card_result.status,
+                    'lastUpdatedAt':
+                        access_card_result.last_updated_at.isoformat(),
+                    'lastUpdatedByUserId':
+                        access_card_result.last_updated_by_user_id,
+                    'lastUpdatedByFirstName':
+                        access_card_result.last_updated_by_first_name,
+                    'lastUpdatedByLastName':
+                        access_card_result.last_updated_by_last_name,
+                })
 
         # assigned devices
         user_devices = db.session.query(
@@ -463,7 +463,7 @@ def read_user_view(user_id):
             'lastUpdatedByUserId': user.last_updated_by_user_id,
             'devices': users_devices_res,
             'deviceAccessHistory': access_logs,
-            'accessCard': access_card,
+            'accessCards': access_cards,
         }
 
         return jsonify(view=view)

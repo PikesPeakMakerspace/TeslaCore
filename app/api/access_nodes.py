@@ -89,14 +89,12 @@ def update_access_node(access_node_id):
     status = request.json.get("status", None).strip()
 
     if (not access_node_id):
-        abort(422, 'missing device id e.g. /api/accessNodes/NODE-ID')
+        abort(422, 'missing access node id e.g. /api/accessNodes/NODE-ID')
 
-    if (not type or not name or not mac_address):
-        abort(422, 'missing type or name or macAddress')
-
-    valid_type = type in [e.value for e in DeviceTypeEnum]
-    if (not valid_type):
-        abort(422, 'invalid type')
+    if type:
+        valid_type = type in [e.value for e in DeviceTypeEnum]
+        if (not valid_type):
+            abort(422, 'invalid type')
 
     # validate optional device id if assigned
     if (device_id):
@@ -160,7 +158,7 @@ def archive_access_node(access_node_id):
         access_node = AccessNode.query.filter_by(id=access_node_id).first()
 
         if not access_node:
-            abort(404, 'unable to find a device with that id')
+            abort(404, 'unable to find an access node with that id')
 
         # archive access node
         access_node.status = AccessNodeStatusEnum.ARCHIVED
@@ -185,6 +183,8 @@ def read_access_nodes():
     # set order by
     order_by = AccessNode.name
     match request.args.get('orderBy'):
+        case 'name':
+            order_by = AccessNode.name
         case 'date':
             order_by = AccessNode.created_at
         case 'type':
@@ -382,9 +382,6 @@ def scan_access_node(access_node_id):
             createdByUserId=access_log.created_by_user_id,
             createdAt=access_log.created_at.isoformat()
         )
-
-    except exc.IntegrityError:
-        abort(409, 'an access node with that name already exists')
     except exceptions.NotFound as err:
         abort(404, err)
     except Exception:
