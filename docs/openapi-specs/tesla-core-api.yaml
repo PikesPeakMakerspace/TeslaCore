@@ -1,0 +1,3019 @@
+openapi: 3.0.0
+info:
+    title: TESLA Core API
+    description: TESLA - Tools Enabled Safely and Library Access - This is the API designed for the Pikes Peak Makerspace RFID equipment access project.
+    version: 1.0.0
+servers:
+    - url: http://127.0.0.1:8080/api
+      description: local prod server (make run)
+    - url: http://127.0.0.1:5000/api
+      description: local dev server (make dev)
+tags:
+    - name: health
+    - name: auth
+    - name: users
+    - name: devices
+    - name: accessCards
+    - name: accessNodes
+    - name: reports
+components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+    schemas:
+        userRole:
+            type: string
+            enum:
+                - unverified
+                - user
+                - editor
+                - admin
+                - public display
+        userStatus:
+            type: string
+            enum:
+                - active
+                - inactive
+                - suspended
+                - archived
+        accessCardStatus:
+            type: string
+            enum:
+                - active
+                - inactive
+                - lost
+                - stolen
+                - archived
+        userEmergeAccessLevel:
+            type: string
+            enum:
+                - business hours access
+                - full day access
+                - admin
+                - blocked
+        userAccessAction:
+            type: string
+            enum:
+                - register
+                - login
+                - logout
+        accessNodeStatus:
+            type: string
+            enum:
+                - offline
+                - idle
+                - enabled
+                - in use
+                - error
+                - end of run
+                - lockdown
+                - archived
+        accessNodeScanAction:
+            type: string
+            enum:
+                - login
+                - logout
+                - hello
+                - acknowledge
+        deviceType:
+            type: string
+            enum:
+                - machine
+                - door
+        deviceStatus:
+            type: string
+            enum:
+                - available
+                - out of order
+                - offline
+                - lost
+                - stolen
+                - archived
+        contentType:
+            type: string
+            enum:
+                - 'application/json'
+                - 'text/csv'
+        orderDir:
+            type: string
+            enum:
+                - desc
+                - asc
+    responses:
+        unknownError:
+            description: Unknown error
+            content:
+                'application/json':
+                    schema:
+                        type: object
+                        properties:
+                            code:
+                                type: number
+                            error:
+                                type: string
+                            message:
+                                type: string
+                        example:
+                            code: 500
+                            error: unknown
+                            message: an unknown error occurred
+paths:
+    /health:
+        get:
+            tags:
+                - health
+            summary: Returns an 'ok' health status if the server is running and healthy
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json': {}
+    /auth/register:
+        post:
+            tags:
+                - auth
+            summary: Register a new user. Note that only one user can be registered at this time, the first admin user. Additional users can be created via the /user/create endpoint as an admin. This will open up in the future when there's a need and added verification and security is in place.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    description: At this time username is also the user's email address and must be unique in the system.
+                                    type: string
+                                password:
+                                    description: The new user's password
+                                    type: string
+                                firstName:
+                                    description: The new user's first name
+                                    type: string
+                                lastName:
+                                    description: The new user's last name
+                                    type: string
+                            required:
+                                - username
+                                - password
+                                - firstName
+                                - lastName
+                            example:
+                                username: example@example.com
+                                password: supersecret1234!
+                                firstName: John
+                                lastName: Doe
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: registration successful
+                '422':
+                    description: Missing required property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing username
+                '401':
+                    description: User already exists
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: A user is already registered. For now until there's a need, only the first user can register. Create new users instead in admin.
+
+    /auth/login:
+        post:
+            tags:
+                - auth
+            summary: Authenticate with the API via a new login.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    description: The user's email address.
+                                    type: string
+                                password:
+                                    description: The user's password
+                                    type: string
+                            required:
+                                - username
+                                - password
+                            example:
+                                username: me@me.com
+                                password: me
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    access_token:
+                                        type: string
+                                    refreshToken:
+                                        type: string
+                                example:
+                                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwNTI2MjQ2OSwianRpIjoiZTZhM2VmNjEtNmVjYy00Njk5LWEyMjctMDg5NGU4MGM4NTNkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6Ijk5OTZkYmNjLTVkZDUtNGIwMS1iNjAxLWJjMTU3ZmJjYjA0ZSIsIm5iZiI6MTcwNTI2MjQ2OSwiZXhwIjoxNzA1MjY2MDY5fQ.-dzWjnBVWpvPELxnayDc_prCWaPHjQsjGJcVWRdg8ok
+                                    refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwNTI2MjQ2OSwianRpIjoiMjA3MzRmMDEtOTJiZS00MzdkLWI1OWYtYTM5ZDhhYmI1NWQyIiwidHlwZSI6InJlZnJlc2giLCJzdWIiOiI5OTk2ZGJjYy01ZGQ1LTRiMDEtYjYwMS1iYzE1N2ZiY2IwNGUiLCJuYmYiOjE3MDUyNjI0NjksImV4cCI6MTcwNzg1NDQ2OX0.dw54Vj6AjOvh_EeSToIOEHK2nScPXF1W6VcrtATbMrk
+                '401':
+                    description: Wrong username or password
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: wrong username or password
+
+    /auth/refresh:
+        post:
+            tags:
+                - auth
+            summary: Refresh access token with refresh token. An access token expires in one hour. A refresh token expires in 30 days.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response (TODO - expired refresh token response)
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    accessToken:
+                                        type: string
+                                example:
+                                    access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwNTI2MjQ2OSwianRpIjoiZTZhM2VmNjEtNmVjYy00Njk5LWEyMjctMDg5NGU4MGM4NTNkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6Ijk5OTZkYmNjLTVkZDUtNGIwMS1iNjAxLWJjMTU3ZmJjYjA0ZSIsIm5iZiI6MTcwNTI2MjQ2OSwiZXhwIjoxNzA1MjY2MDY5fQ.-dzWjnBVWpvPELxnayDc_prCWaPHjQsjGJcVWRdg8ok
+            security:
+                - bearerAuth: []
+    /auth/who-am-i:
+        get:
+            tags:
+                - auth
+            summary: Return logged in user data
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    firstName:
+                                        type: string
+                                    id:
+                                        type: string
+                                    lastName:
+                                        type: string
+                                    username:
+                                        type: string
+                                example:
+                                    firstName: John
+                                    id: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                                    lastName: Doe
+                                    username: example@example.com
+            security:
+                - bearerAuth: []
+    /auth/valid:
+        get:
+            tags:
+                - auth
+            summary: Return a "valid" message if token is valid (user logged in).
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: valid
+            security:
+                - bearerAuth: []
+    /auth/logout:
+        post:
+            tags:
+                - auth
+            summary: Logout the current user.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            example:
+                                refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwNTI2MjQ2OSwianRpIjoiMjA3MzRmMDEtOTJiZS00MzdkLWI1OWYtYTM5ZDhhYmI1NWQyIiwidHlwZSI6InJlZnJlc2giLCJzdWIiOiI5OTk2ZGJjYy01ZGQ1LTRiMDEtYjYwMS1iYzE1N2ZiY2IwNGUiLCJuYmYiOjE3MDUyNjI0NjksImV4cCI6MTcwNzg1NDQ2OX0.dw54Vj6AjOvh_EeSToIOEHK2nScPXF1W6VcrtATbMrk
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: goodbye
+            security:
+                - bearerAuth: []
+    /users:
+        post:
+            tags:
+                - users
+            summary: Create a new user.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                firstName:
+                                    type: string
+                                lastName:
+                                    type: string
+                                role:
+                                    $ref: '#/components/schemas/userRole'
+                                eMergeAccessLevel:
+                                    $ref: '#/components/schemas/userEmergeAccessLevel'
+                                password:
+                                    type: string
+                                status:
+                                    $ref: '#/components/schemas/userStatus'
+                            required:
+                                - username
+                                - firstName
+                                - lastName
+                                - role
+                                - password
+                                - status
+                            example:
+                                username: 'example@example.com'
+                                firstName: 'Cornell'
+                                lastName: 'Gorczany'
+                                role: admin
+                                eMergeAccessLevel: full day access
+                                password: supersecret1234!
+                                status: active
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    username:
+                                        type: string
+                                    firstName:
+                                        type: string
+                                    lastName:
+                                        type: string
+                                    eMergeAccessLevel:
+                                        $ref: '#/components/schemas/userEmergeAccessLevel'
+                                    role:
+                                        $ref: '#/components/schemas/userRole'
+                                    status:
+                                        $ref: '#/components/schemas/userStatus'
+                                    createdAt:
+                                        type: string
+                                    lastUpdatedAt:
+                                        type: string
+                                    lastUpdatedByUserId:
+                                        type: string
+                                example:
+                                    id: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                    username: example2@example.com
+                                    firstName: Cornell
+                                    lastName: Gorczany
+                                    eMergeAccessLevel: full day access
+                                    role: admin
+                                    status: active
+                                    createdAt: '2024-01-15T15:19:36'
+                                    lastUpdatedAt: '2024-01-15T15:19:36'
+                                    lastUpdatedByUserId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                '422':
+                    description: Missing or invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing username or password
+                '409':
+                    description: User already exists
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: a user with that username already exists
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - users
+            summary: List users.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: 1
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: 20
+                - name: orderBy
+                  in: query
+                  schema:
+                      type: string
+                      enum:
+                          [
+                              'firstName',
+                              'lastName',
+                              'eMergeAccessLevel',
+                              'date',
+                              'role',
+                              'status',
+                          ]
+                  example: name
+                - name: orderDir
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/orderDir'
+                  example: desc
+                - name: role
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userRole'
+                  example: user
+                - name: eMergeAccessLevel
+                  in: query
+                  schema:
+                      type: string
+                      enum:
+                          [
+                              business hours access,
+                              full day access,
+                              admin,
+                              blocked,
+                          ]
+                  example: business hours access
+                - name: status
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userStatus'
+                  example: active
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: string
+                                        username:
+                                            type: string
+                                        firstName:
+                                            type: string
+                                        lastName:
+                                            type: string
+                                        eMergeAccessLevel:
+                                            $ref: '#/components/schemas/userEmergeAccessLevel'
+                                        role:
+                                            $ref: '#/components/schemas/userRole'
+                                        status:
+                                            $ref: '#/components/schemas/userStatus'
+                                        createdAt:
+                                            type: string
+                                        lastUpdatedAt:
+                                            type: string
+                                        lastUpdatedByUserId:
+                                            type: string
+                                example:
+                                    - id: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                      username: example2@example.com
+                                      firstName: Cornell
+                                      lastName: Gorczany
+                                      eMergeAccessLevel: full day access
+                                      role: admin
+                                      status: active
+                                      createdAt: '2024-01-15T15:19:36'
+                                      lastUpdatedAt: '2024-01-15T15:19:36'
+                                      lastUpdatedByUserId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /users/{userId}:
+        put:
+            tags:
+                - users
+            summary: Update a user.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                firstName:
+                                    type: string
+                                lastName:
+                                    type: string
+                                role:
+                                    $ref: '#/components/schemas/userRole'
+                                eMergeAccessLevel:
+                                    $ref: '#/components/schemas/userEmergeAccessLevel'
+                                password:
+                                    type: string
+                                status:
+                                    $ref: '#/components/schemas/userStatus'
+                            example:
+                                username: example@example.com
+                                firstName: John
+                                lastName: Doe
+                                role: admin
+                                eMergeAccessLevel: full day access
+                                password: me
+                                status: active
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: userId
+                  description: A user id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    username:
+                                        type: string
+                                    firstName:
+                                        type: string
+                                    lastName:
+                                        type: string
+                                    eMergeAccessLevel:
+                                        $ref: '#/components/schemas/userEmergeAccessLevel'
+                                    role:
+                                        $ref: '#/components/schemas/userRole'
+                                    status:
+                                        $ref: '#/components/schemas/userStatus'
+                                    createdAt:
+                                        type: string
+                                    lastUpdatedAt:
+                                        type: string
+                                    lastUpdatedByUserId:
+                                        type: string
+                                example:
+                                    id: 5e0a69d2-2ada-45eb-9b26-b64162dbe242
+                                    username: example2@example.com
+                                    firstName: Westley
+                                    lastName: Kerluke
+                                    eMergeAccessLevel: full day access
+                                    role: editor
+                                    status: active
+                                    createdAt: '2024-01-15T15:25:14'
+                                    lastUpdatedAt: '2024-01-15T15:30:00'
+                                    lastUpdatedByUserId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                '422':
+                    description: Invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: invalid status
+                '404':
+                    description: User does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a user with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        delete:
+            tags:
+                - users
+            summary: Delete a user.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: userId
+                  description: A user id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: user archived
+                '422':
+                    description: Invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: invalid status
+                '404':
+                    description: User does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a user with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - users
+            summary: Load data for a user.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: userId
+                  description: A user id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    username:
+                                        type: string
+                                    firstName:
+                                        type: string
+                                    lastName:
+                                        type: string
+                                    eMergeAccessLevel:
+                                        $ref: '#/components/schemas/userEmergeAccessLevel'
+                                    role:
+                                        $ref: '#/components/schemas/userRole'
+                                    status:
+                                        $ref: '#/components/schemas/userStatus'
+                                    createdAt:
+                                        type: string
+                                    lastUpdatedAt:
+                                        type: string
+                                    lastUpdatedByUserId:
+                                        type: string
+                                    devices:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                id:
+                                                    type: string
+                                                name:
+                                                    type: string
+                                    deviceAccessHistory:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                userId:
+                                                    type: string
+                                                userFirstName:
+                                                    type: string
+                                                userLastName:
+                                                    type: string
+                                                accessCardId:
+                                                    type: string
+                                                accessNodeId:
+                                                    type: string
+                                                deviceId:
+                                                    type: string
+                                                deviceName:
+                                                    type: string
+                                                action:
+                                                    $ref: '#/components/schemas/accessNodeScanAction'
+                                                success:
+                                                    type: boolean
+                                                createdByUserId:
+                                                    type: string
+                                                createdAt:
+                                                    type: string
+                                    accessCards:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                id:
+                                                    type: string
+                                                cardNumber:
+                                                    type: string
+                                                cardType:
+                                                    type: string
+                                                facilityCode:
+                                                    type: string
+                                                status:
+                                                    $ref: '#/components/schemas/accessCardStatus'
+                                                lastUpdatedAt:
+                                                    type: string
+                                                lastUpdatedByUserId:
+                                                    type: string
+                                                lastUpdatedByFirstName:
+                                                    type: string
+                                                lastUpdatedByLastName:
+                                                    type: string
+                                example:
+                                    id: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                    username: example2@example.com
+                                    firstName: Cornell
+                                    lastName: Gorczany
+                                    eMergeAccessLevel: full day access
+                                    role: admin
+                                    status: active
+                                    createdAt: '2024-01-15T15:19:36'
+                                    lastUpdatedAt: '2024-01-15T15:19:36'
+                                    lastUpdatedByUserId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                                    devices:
+                                        - id: ab981a28-af69-486a-a03d-2f19a917a902
+                                          name: The BOSS Laser
+                                    deviceAccessHistory:
+                                        - userId: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                          userFirstName: Cornell
+                                          userLastName: Gorczany
+                                          accessCardId: b508dc69-b929-4478-bda1-8879e1d1d2f8
+                                          accessNodeId: 509b3963-2fa9-4fdf-9dd6-3b9dbb388b15
+                                          deviceId: ab981a28-af69-486a-a03d-2f19a917a902
+                                          deviceName: The BOSS Laser
+                                          action: login
+                                          success: true
+                                          createdByUserId: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                          createdAt: '2024-01-16T15:00:00'
+                                    accessCards:
+                                        - id: b508dc69-b929-4478-bda1-8879e1d1d2f8
+                                          cardNumber: 1023458
+                                          cardType: 46
+                                          facilityCode: 46
+                                          status: active
+                                          lastUpdatedAt: '2024-01-15T16:00:00'
+                                          lastUpdatedByUserId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                                          lastUpdatedByFirstName: Andreane
+                                          lastUpdatedByLastName: Walker
+                '422':
+                    description: Missing user id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing user id e.g. /api/users/USER-ID
+                '404':
+                    description: User does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a user with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /devices:
+        post:
+            tags:
+                - devices
+            summary: 'Create a device to be enabled by an access node. Examples: laser, 3D printer'
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                type:
+                                    $ref: '#/components/schemas/deviceType'
+                                name:
+                                    type: string
+                                status:
+                                    $ref: '#/components/schemas/deviceStatus'
+                            required:
+                                - type
+                                - name
+                                - status
+                            example:
+                                type: machine
+                                name: The BOSS Laser
+                                status: available
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    name:
+                                        type: string
+                                    status:
+                                        $ref: '#/components/schemas/deviceStatus'
+                                    type:
+                                        $ref: '#/components/schemas/deviceType'
+                                example:
+                                    id: ab981a28-af69-486a-a03d-2f19a917a902
+                                    name: The BOSS Laser
+                                    status: available
+                                    type: machine
+                '422':
+                    description: Missing or invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing type or name
+                '409':
+                    description: Device already exists
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: a device with that name already exists
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - devices
+            summary: List devices.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '20'
+                - name: orderBy
+                  in: query
+                  schema:
+                      type: string
+                      enum: ['date', 'type', 'status']
+                  example: name
+                - name: orderDir
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/orderDir'
+                  example: desc
+                - name: userId
+                  in: query
+                  schema:
+                      type: string
+                  example: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                - name: type
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/deviceType'
+                  example: machine
+                - name: status
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/deviceStatus'
+                  example: archived
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    devices:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                createdAt:
+                                                    type: string
+                                                id:
+                                                    type: string
+                                                name:
+                                                    type: string
+                                                status:
+                                                    $ref: '#/components/schemas/deviceStatus'
+                                                type:
+                                                    type: string
+                                example:
+                                    devices:
+                                        - createdAt: '2023-12-05T23:48:45'
+                                          id: ab981a28-af69-486a-a03d-2f19a917a902
+                                          name: The BOSS Laser
+                                          status: active
+                                          type: machine
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /devices/{deviceId}:
+        put:
+            tags:
+                - devices
+            summary: Update a device.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                type:
+                                    $ref: '#/components/schemas/deviceType'
+                                name:
+                                    type: string
+                                status:
+                                    $ref: '#/components/schemas/deviceStatus'
+                            required:
+                                - type
+                                - name
+                            example:
+                                type: machine
+                                name: The BOSS Laser
+                                status: available
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: deviceId
+                  description: A device id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    name:
+                                        type: string
+                                    status:
+                                        $ref: '#/components/schemas/deviceStatus'
+                                    type:
+                                        $ref: '#/components/schemas/deviceType'
+                                example:
+                                    id: ab981a28-af69-486a-a03d-2f19a917a902
+                                    name: The BOSS Laser
+                                    status: available
+                                    type: machine
+                '422':
+                    description: Missing device id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing device id e.g. /api/devices/DEVICE-ID
+                '404':
+                    description: Device does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a device with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        delete:
+            tags:
+                - devices
+            summary: Archive a device.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: deviceId
+                  description: An device id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: device archived
+                '422':
+                    description: Missing device id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing device id e.g. /api/devices/DEVICE-ID
+                '404':
+                    description: Device does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a device with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - devices
+            summary: Load data for a device.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: deviceId
+                  description: An device id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    createdAt:
+                                        type: string
+                                    id:
+                                        type: string
+                                    name:
+                                        type: string
+                                    status:
+                                        type: string
+                                    type:
+                                        $ref: '#/components/schemas/deviceStatus'
+                                    accessHistory:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                userId:
+                                                    type: string
+                                                userFirstName:
+                                                    type: string
+                                                userLastName:
+                                                    type: string
+                                                accessCardId:
+                                                    type: string
+                                                accessNodeId:
+                                                    type: string
+                                                deviceId:
+                                                    type: string
+                                                deviceName:
+                                                    type: string
+                                                action:
+                                                    $ref: '#/components/schemas/accessNodeScanAction'
+                                                success:
+                                                    type: boolean
+                                                createdByUserId:
+                                                    type: string
+                                                createdAt:
+                                                    type: string
+                                    accessNode:
+                                        type: object
+                                        properties:
+                                            created_at:
+                                                type: string
+                                            device_id:
+                                                type: string
+                                            id:
+                                                type: string
+                                            last_accessed_at:
+                                                type: string
+                                            last_accessed_user_id:
+                                                type: string
+                                            mac_address:
+                                                type: string
+                                            name:
+                                                type: string
+                                            status:
+                                                type: string
+                                            type:
+                                                $ref: '#/components/schemas/deviceType'
+                                    deviceUsers:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                firstName:
+                                                    type: string
+                                                id:
+                                                    type: string
+                                                lastName:
+                                                    type: string
+                                example:
+                                    view:
+                                        createdAt: '2023-12-05T23:48:45'
+                                        id: ab981a28-af69-486a-a03d-2f19a917a902
+                                        name: The BOSS Laser
+                                        status: active
+                                        type: machine
+                                        accessHistory:
+                                            - userId: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                              userFirstName: Cornell
+                                              userLastName: Gorczany
+                                              accessCardId: b508dc69-b929-4478-bda1-8879e1d1d2f8
+                                              accessNodeId: 509b3963-2fa9-4fdf-9dd6-3b9dbb388b15
+                                              deviceId: ab981a28-af69-486a-a03d-2f19a917a902
+                                              deviceName: The BOSS Laser
+                                              action: login
+                                              success: true
+                                              createdByUserId: 9a8321ee-d755-45c3-ad52-248329efa8ae
+                                              createdAt: '2024-01-16T15:00:00'
+                                        accessNode:
+                                            created_at: '2024-01-16T15:00:00'
+                                            device_id: ab981a28-af69-486a-a03d-2f19a917a902
+                                            id: 509b3963-2fa9-4fdf-9dd6-3b9dbb388b15
+                                            last_accessed_at: '2023-12-05T23:54:14'
+                                            last_accessed_user_id: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                                            mac_address: 00000ABB28FA
+                                            name: BOSS Laser Node
+                                            status: active
+                                            type: machine
+                                        deviceUsers:
+                                            - firstName: 'John'
+                                              id: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                                              lastName: 'Doe'
+                '404':
+                    description: Device does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a device with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /devices/{deviceId}/assign:
+        post:
+            tags:
+                - devices
+            summary: Assign a user to a device, giving the user access.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                userId:
+                                    type: string
+                            example:
+                                userId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                            required:
+                                - userId
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: deviceId
+                  description: A device id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                            example:
+                                message: device assigned
+                '422':
+                    description: Missing device or user id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing device id e.g. /api/devices/DEVICE-ID/unassign
+                '404':
+                    description: Device or user not found
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an active device with that id
+                '409':
+                    description: User already assigned
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: user already assigned to this device
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /devices/{deviceId}/unassign:
+        delete:
+            tags:
+                - devices
+            summary: Unassign a user from a device.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: deviceId
+                  description: A device id
+                  schema:
+                      type: string
+                  required: true
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                userId:
+                                    type: string
+                            example:
+                                userId: 9996dbcc-5dd5-4b01-b601-bc157fbcb04e
+                            required:
+                                - userId
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                            example:
+                                message: device assigned
+                '404':
+                    description: Device or user not found
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an active device with that id
+                '422':
+                    description: Missing device or user id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing device id e.g. /api/devices/DEVICE-ID/unassign
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessCards:
+        post:
+            tags:
+                - accessCards
+            summary: Create an access card that will be scanned at access nodes.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                cardNumber:
+                                    type: number
+                                facilityCode:
+                                    type: number
+                                cardType:
+                                    type: number
+                                status:
+                                    $ref: '#/components/schemas/accessCardStatus'
+                            required:
+                                - cardNumber
+                        example:
+                            cardNumber: 1023459
+                            facilityCode: 46
+                            cardType: 46
+                            status: active
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    cardNumber:
+                                        type: number
+                                    facilityCode:
+                                        type: number
+                                    cardType:
+                                        type: number
+                                    status:
+                                        $ref: '#/components/schemas/accessCardStatus'
+                                    createdAt:
+                                        type: string
+                                    lastUpdatedAt:
+                                        type: string
+                                    lastUpdatedByUserId:
+                                        type: string
+                                example:
+                                    id: 87d36ad2-4ab9-4b57-9ba3-2376f0210370
+                                    cardNumber: 1023459
+                                    facilityCode: 46
+                                    cardType: 46
+                                    status: active
+                                    createdAt: '2024-01-20T12:35:19'
+                                    lastUpdatedAt: '2024-01-20T12:35:19'
+                                    lastUpdatedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                '422':
+                    description: Missing or invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing cardNumber
+                '409':
+                    description: Access card already exists
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: an access card with that number already exists
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - accessCards
+            summary: List access cards.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '20'
+                - name: orderBy
+                  in: query
+                  schema:
+                      type: string
+                      enum:
+                          [
+                              'cardNumber',
+                              'date',
+                              'updatedDate',
+                              'cardType',
+                              'facilityCode',
+                          ]
+                  example: cardNumber
+                - name: orderDir
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/orderDir'
+                  example: desc
+                - name: status
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/accessCardStatus'
+                  example: archived
+                - name: facilityCode
+                  in: query
+                  schema:
+                      type: number
+                  example: 46
+                - name: cardType
+                  in: query
+                  schema:
+                      type: number
+                  example: 46
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: string
+                                        cardNumber:
+                                            type: number
+                                        facilityCode:
+                                            type: number
+                                        cardType:
+                                            type: number
+                                        status:
+                                            $ref: '#/components/schemas/accessCardStatus'
+                                        createdAt:
+                                            type: string
+                                        lastUpdatedAt:
+                                            type: string
+                                        lastUpdatedByUserId:
+                                            type: string
+                                    example:
+                                        id: 87d36ad2-4ab9-4b57-9ba3-2376f0210370
+                                        cardNumber: 1023459
+                                        facilityCode: 46
+                                        cardType: 46
+                                        status: active
+                                        createdAt: '2024-01-20T12:35:19'
+                                        lastUpdatedAt: '2024-01-20T12:35:19'
+                                        lastUpdatedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessCards/{accessCardId}:
+        put:
+            tags:
+                - accessCards
+            summary: Update an access card.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                cardNumber:
+                                    type: number
+                                facilityCode:
+                                    type: number
+                                cardType:
+                                    type: number
+                                status:
+                                    $ref: '#/components/schemas/accessCardStatus'
+                            example:
+                                cardNumber: 223456
+                                facilityCode: 47
+                                cardType: 46
+                                status: active
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessCardId
+                  description: An access card id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    cardNumber:
+                                        type: number
+                                    facilityCode:
+                                        type: number
+                                    cardType:
+                                        type: number
+                                    status:
+                                        $ref: '#/components/schemas/accessCardStatus'
+                                    createdAt:
+                                        type: string
+                                    lastUpdatedAt:
+                                        type: string
+                                    lastUpdatedByUserId:
+                                        type: string
+                                example:
+                                    id: 87d36ad2-4ab9-4b57-9ba3-2376f0210370
+                                    cardNumber: 1023459
+                                    facilityCode: 46
+                                    cardType: 46
+                                    status: active
+                                    createdAt: '2024-01-20T12:35:19'
+                                    lastUpdatedAt: '2024-01-20T12:35:19'
+                                    lastUpdatedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                '422':
+                    description: Missing access card id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access card id e.g. /api/accessCards/CARD-ID
+                '404':
+                    description: Access card does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an access card with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        delete:
+            tags:
+                - accessCards
+            summary: Archive an access card.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessCardId
+                  description: An access card id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: access card archived
+                '422':
+                    description: Missing access card id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access card id e.g. /api/accessCards/CARD-ID
+                '404':
+                    description: Access card does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an access card with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - accessCards
+            summary: Load data for an access card.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessCardId
+                  description: An access card id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    view:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: string
+                                            cardNumber:
+                                                type: number
+                                            facilityCode:
+                                                type: number
+                                            cardType:
+                                                type: number
+                                            status:
+                                                $ref: '#/components/schemas/accessCardStatus'
+                                            createdAt:
+                                                type: string
+                                            lastUpdatedAt:
+                                                type: string
+                                            lastUpdatedByUserId:
+                                                type: string
+                                            assignedTo:
+                                                type: object
+                                                properties:
+                                                    emergeAccessLevel:
+                                                        $ref: '#/components/schemas/userEmergeAccessLevel'
+                                                    firstName:
+                                                        type: string
+                                                    id:
+                                                        type: string
+                                                    lastName:
+                                                        type: string
+                                                    role:
+                                                        $ref: '#/components/schemas/userRole'
+                                                    status:
+                                                        $ref: '#/components/schemas/userStatus'
+                                                    username:
+                                                        type: string
+                                            assignmentLog:
+                                                type: array
+                                                items:
+                                                    type: object
+                                                    properties:
+                                                        accessCardId:
+                                                            type: string
+                                                        assignedByFirstName:
+                                                            type: string
+                                                        assignedByLastName:
+                                                            type: string
+                                                        assignedByUserId:
+                                                            type: string
+                                                        assignedToFirstName:
+                                                            type: string
+                                                        assignedToLastName:
+                                                            type: string
+                                                        assignedToUserId:
+                                                            type: string
+                                                        createdAt:
+                                                            type: string
+                                                        emergeAccessLevel:
+                                                            type: string
+                                                        status:
+                                                            $ref: '#/components/schemas/accessCardStatus'
+                                example:
+                                    view:
+                                        id: 87d36ad2-4ab9-4b57-9ba3-2376f0210370
+                                        cardNumber: 1023459
+                                        facilityCode: 46
+                                        cardType: 46
+                                        status: active
+                                        createdAt: '2024-01-20T12:35:19'
+                                        lastUpdatedAt: '2024-01-20T12:35:19'
+                                        lastUpdatedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                        assignedTo:
+                                            eMergeAccessLevel: 'full day access'
+                                            firstName: 'John'
+                                            id: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                            lastName: 'Doe'
+                                            role: 'admin'
+                                            status: 'active'
+                                            username: 'example@example.com'
+                                        assignmentLog:
+                                            - accessCardId: '87d36ad2-4ab9-4b57-9ba3-2376f0210370'
+                                              assignedByFirstName: 'John'
+                                              assignedByLastName: 'Doe'
+                                              assignedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                              assignedToFirstName: 'John'
+                                              assignedToLastName: 'Doe'
+                                              assignedToUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                              createdAt: '2024-01-12T23:26:18'
+                                              emergeAccessLevel: 'full day access'
+                                              status: 'active'
+                '404':
+                    description: Access card does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an access card with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessCards/{accessCardId}/unassign:
+        delete:
+            tags:
+                - accessCards
+            summary: Unassign a user from an access card.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessCardId
+                  description: An access card id
+                  schema:
+                      type: string
+                  required: true
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                userId:
+                                    type: string
+                            required:
+                                - userId
+                            example:
+                                userId: da306d2d-35a6-4e46-9c84-763c5bc57a18
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                            example:
+                                message: access card assigned
+                '404':
+                    description: Active access or user not found
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an active access card assignment with that user id and access card id
+                '422':
+                    description: Missing access card or user id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access card id e.g. /api/accessCards/CARD-ID/unassign
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessCards/{accessCardId}/assign:
+        post:
+            tags:
+                - accessCards
+            summary: Assign a user to an access card.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                userId:
+                                    type: string
+                            required:
+                                - userId
+                            example:
+                                userId: da306d2d-35a6-4e46-9c84-763c5bc57a18
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessCardId
+                  description: An access card id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                            example:
+                                message: access card assigned
+                '422':
+                    description: Missing access card or user id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access card id e.g. /api/accessCards/CARD-ID/assign
+                '404':
+                    description: Active access card or user not found
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an active access card with that id
+                '409':
+                    description: Access card already assigned
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: card already assigned
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessNodes:
+        post:
+            tags:
+                - accessNodes
+            summary: Create an access node that will scan access cards, enabling access to the connected device.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                type:
+                                    $ref: '#/components/schemas/deviceType'
+                                name:
+                                    type: string
+                                macAddress:
+                                    type: string
+                                deviceId:
+                                    type: string
+                            required:
+                                - name
+                                - type
+                                - macAddress
+                            example:
+                                type: machine
+                                name: BOSS Laser Node MKII
+                                macAddress: '4e:f0:d2:5c:eb:d2'
+                                deviceId: 558fc3d4-b33e-4d52-9e78-b60487392045
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    deviceId:
+                                        type: string
+                                    macAddress:
+                                        type: string
+                                    status:
+                                        $ref: '#/components/schemas/accessNodeStatus'
+                                    createdAt:
+                                        type: string
+                                example:
+                                    createdAt: '2024-01-21T16:54:44'
+                                    deviceId: '558fc3d4-b33e-4d52-9e78-b60487392045'
+                                    id: '65c0e5bf-2f7a-4c9d-8ac4-0a58536504cb'
+                                    macAddress: '4e:f0:d2:5c:eb:d2'
+                                    name: 'BOSS Laser Node MKII'
+                                    status: 'offline'
+                                    type: 'machine'
+                '422':
+                    description: Missing or invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing type or name or macAddress
+                '409':
+                    description: Access node already exists
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: an access node with that name already exists
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - accessNodes
+            summary: List access nodes.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '20'
+                - name: orderBy
+                  in: query
+                  schema:
+                      type: string
+                      enum: ['name', 'date', 'type', 'status', 'macAddress']
+                  example: name
+                - name: orderDir
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/orderDir'
+                  example: desc
+                - name: type
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/deviceType'
+                  example: door
+                - name: status
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/accessNodeStatus'
+                  example: offline
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: string
+                                        deviceId:
+                                            type: string
+                                        macAddress:
+                                            type: string
+                                        status:
+                                            $ref: '#/components/schemas/accessNodeStatus'
+                                        createdAt:
+                                            type: string
+                                    example:
+                                        createdAt: '2024-01-21T16:54:44'
+                                        deviceId: '558fc3d4-b33e-4d52-9e78-b60487392045'
+                                        id: '65c0e5bf-2f7a-4c9d-8ac4-0a58536504cb'
+                                        macAddress: '4e:f0:d2:5c:eb:d2'
+                                        name: 'BOSS Laser Node MKII'
+                                        status: 'offline'
+                                        type: 'machine'
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessNodes/{accessNodeId}/scan:
+        post:
+            tags:
+                - accessNodes
+            summary: Mock scan an access card for dev manual overrides (access nodes use MQTT instead).
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                accessCardNumber:
+                                    type: number
+                                action:
+                                    $ref: '#/components/schemas/accessNodeScanAction'
+                            required:
+                                - accessCardNumber
+                                - action
+                            example:
+                                accessCardNumber: 1023458
+                                action: login
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessNodeId
+                  description: An access node id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    userId:
+                                        type: string
+                                    accessCardId:
+                                        type: string
+                                    accessNodeId:
+                                        type: string
+                                    deviceId:
+                                        type: string
+                                    action:
+                                        $ref: '#/components/schemas/accessNodeScanAction'
+                                    success:
+                                        type: boolean
+                                    createdByUserId:
+                                        type: string
+                                    createdAt:
+                                        type: string
+                                example:
+                                    accessCardId: 'b508dc69-b929-4478-bda1-8879e1d1d2f8'
+                                    accessNodeId: '509b3963-2fa9-4fdf-9dd6-3b9dbb388b15'
+                                    action: 'logout'
+                                    createdAt: '2024-01-21T17:59:09'
+                                    createdByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                    deviceId: 'ab981a28-af69-486a-a03d-2f19a917a902'
+                                    id: '2d38a381-4ba1-4b66-8f40-d93d518a2735'
+                                    success: true
+                                    userId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                '422':
+                    description: Missing or invalid property
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing accessNodeId or accessCardNumber or action
+                '404':
+                    description: Access node or user not found
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a user with that access card id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /accessNodes/{accessNodeId}:
+        put:
+            tags:
+                - accessNodes
+            summary: Update an access node.
+            requestBody:
+                content:
+                    'application/json':
+                        schema:
+                            type: object
+                            properties:
+                                type:
+                                    $ref: '#/components/schemas/deviceType'
+                                name:
+                                    type: string
+                                macAddress:
+                                    type: string
+                                deviceId:
+                                    type: string
+                            example:
+                                type: machine
+                                name: BOSS Laser Node MKII
+                                macAddress: '4e:f0:d2:5c:eb:d2'
+                                deviceId: 558fc3d4-b33e-4d52-9e78-b60487392045
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessNodeId
+                  description: An access node id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: string
+                                    deviceId:
+                                        type: string
+                                    macAddress:
+                                        type: string
+                                    status:
+                                        $ref: '#/components/schemas/accessNodeStatus'
+                                    createdAt:
+                                        type: string
+                                example:
+                                    createdAt: '2024-01-21T16:54:44'
+                                    deviceId: '558fc3d4-b33e-4d52-9e78-b60487392045'
+                                    id: '65c0e5bf-2f7a-4c9d-8ac4-0a58536504cb'
+                                    macAddress: '4e:f0:d2:5c:eb:d2'
+                                    name: 'BOSS Laser Node MKII'
+                                    status: 'offline'
+                                    type: 'machine'
+                '422':
+                    description: Missing access node id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access node id e.g. /api/accessNodes/NODE-ID
+                '404':
+                    description: Access node or device does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find a device with that id to assign
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        delete:
+            tags:
+                - accessNodes
+            summary: Archive an access node.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessNodeId
+                  description: An access node id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: access node archived
+                '422':
+                    description: Missing access node id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access node id e.g. /api/accessNodes/NODE-ID
+                '404':
+                    description: Access node does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an access node with that id
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+        get:
+            tags:
+                - accessNodes
+            summary: Load data for an access node.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      type: string
+                  example: application/json
+                - in: path
+                  name: accessNodeId
+                  description: An access node id
+                  schema:
+                      type: string
+                  required: true
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    view:
+                                        type: object
+                                        properties:
+                                            accessHistory:
+                                                type: array
+                                                items:
+                                                    type: object
+                                                    properties:
+                                                        accessCardId:
+                                                            type: string
+                                                        accessNodeId:
+                                                            type: string
+                                                        action:
+                                                            $ref: '#/components/schemas/accessNodeScanAction'
+                                                        createdAt:
+                                                            type: string
+                                                        createdByUserId:
+                                                            type: string
+                                                        deviceId:
+                                                            type: string
+                                                        deviceName:
+                                                            type: string
+                                                        success:
+                                                            type: boolean
+                                                        userFirstName:
+                                                            type: string
+                                                        userId:
+                                                            type: string
+                                                        userLastName:
+                                                            type: string
+                                            createdAt:
+                                                type: string
+                                            device:
+                                                type: object
+                                                properties:
+                                                    id:
+                                                        type: string
+                                                    name:
+                                                        type: string
+                                                    status:
+                                                        $ref: '#/components/schemas/deviceStatus'
+                                                    type:
+                                                        $ref: '#/components/schemas/deviceType'
+                                            id:
+                                                type: string
+                                            macAddress:
+                                                type: string
+                                            name:
+                                                type: string
+                                            status:
+                                                $ref: '#/components/schemas/accessNodeStatus'
+                                            type:
+                                                $ref: '#/components/schemas/deviceType'
+                                example:
+                                    view:
+                                        accessHistory:
+                                            - accessCardId: 'b508dc69-b929-4478-bda1-8879e1d1d2f8'
+                                              accessNodeId: '509b3963-2fa9-4fdf-9dd6-3b9dbb388b15'
+                                              action: 'logout'
+                                              createdAt: '2024-01-21T17:59:09'
+                                              createdByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                              deviceId: 'ab981a28-af69-486a-a03d-2f19a917a902'
+                                              deviceName: 'The BOSS Laser'
+                                              success: true
+                                              userFirstName: 'John'
+                                              userId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                              userLastName: 'Doe'
+                                        createdAt: '2023-12-05T23:52:35'
+                                        device:
+                                            id: '509b3963-2fa9-4fdf-9dd6-3b9dbb388b15'
+                                            name: 'The BOSS Laser'
+                                            status: 'available'
+                                            type: 'machine'
+                                        id: '509b3963-2fa9-4fdf-9dd6-3b9dbb388b15'
+                                        macAddress: '00000ABB28FA'
+                                        name: 'Boss Laser Node MKII'
+                                        status: 'idle'
+                                        type: 'machine'
+                '404':
+                    description: Access node does not exist
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: unable to find an access node with that id
+                '422':
+                    description: Missing access node id
+                    content:
+                        'application/json':
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                example:
+                                    message: missing access node id e.g. /api/accessNodes/NODE-ID
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /reports/accessCardEdits:
+        get:
+            tags:
+                - reports
+            summary: Get a filterable log of access card edits.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1000'
+                - name: assignedToUserId
+                  in: query
+                  schema:
+                      type: string
+                  example: 50586399-6050-487e-a9dc-a10053560fcd
+                - name: assignedByUserId
+                  in: query
+                  schema:
+                      type: string
+                  example: 50586399-6050-487e-a9dc-a10053560fcd
+                - name: accessCardId
+                  in: query
+                  schema:
+                      type: string
+                  example: dfeee5a3-e731-4324-846b-46b68fea2c9a
+                - name: status
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/accessCardStatus'
+                  example: active
+                - name: eMergeAccessLevel
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userEmergeAccessLevel'
+                  example: full day access
+                - name: startDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-24 16:00:00'
+                - name: endDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-25 16:00:00'
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        accessCardId:
+                                            type: string
+                                        assignedByFirstName:
+                                            type: string
+                                        assignedByLastName:
+                                            type: string
+                                        assignedByUserId:
+                                            type: string
+                                        assignedToFirstName:
+                                            type: string
+                                        assignedToLastName:
+                                            type: string
+                                        assignedToUserId:
+                                            type: string
+                                        createdAt:
+                                            type: string
+                                        emergeAccessLevel:
+                                            $ref: '#/components/schemas/userEmergeAccessLevel'
+                                        status:
+                                            $ref: '#/components/schemas/accessCardStatus'
+                                example:
+                                    - accessCardId: '87d36ad2-4ab9-4b57-9ba3-2376f0210370'
+                                      assignedByFirstName: 'John'
+                                      assignedByLastName: 'Doe'
+                                      assignedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                      assignedToFirstName: 'Johnny'
+                                      assignedToLastName: 'Moe'
+                                      assignedToUserId: 'da306d2d-35a6-4e46-9c84-763c5bc57a18'
+                                      createdAt: '2024-01-12T23:26:18'
+                                      emergeAccessLevel: null
+                                      status: 'active'
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /reports/deviceAccess:
+        get:
+            tags:
+                - reports
+            summary: Get a filterable log of device access.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1000'
+                - name: userId
+                  in: query
+                  schema:
+                      type: string
+                  example: 50586399-6050-487e-a9dc-a10053560fcd
+                - name: accessCardId
+                  in: query
+                  schema:
+                      type: string
+                  example: dfeee5a3-e731-4324-846b-46b68fea2c9a
+                - name: accessNodeId
+                  in: query
+                  schema:
+                      type: string
+                  example: 19957f3f-1af5-4d35-9a27-587d7a00f7b7
+                - name: deviceId
+                  in: query
+                  schema:
+                      type: string
+                  example: d5c48b9a-ffc5-4346-912d-2697249f8f0b
+                - name: action
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/accessNodeScanAction'
+                  example: login
+                - name: startDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-25 16:00:00'
+                - name: endDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-25 15:00:00'
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        accessCardId:
+                                            type: string
+                                        accessNodeId:
+                                            type: string
+                                        action:
+                                            $ref: '#/components/schemas/accessNodeScanAction'
+                                        createdAt:
+                                            type: string
+                                        createdByUserId:
+                                            type: string
+                                        deviceId:
+                                            type: string
+                                        deviceName:
+                                            type: string
+                                        success:
+                                            type: boolean
+                                        userFirstName:
+                                            type: string
+                                        userId:
+                                            type: string
+                                        userLastName:
+                                            type: string
+                                example:
+                                    - accessCardId: 'b508dc69-b929-4478-bda1-8879e1d1d2f8'
+                                      accessNodeId: '509b3963-2fa9-4fdf-9dd6-3b9dbb388b15'
+                                      action: 'logout'
+                                      createdAt: '2024-01-21T17:59:09'
+                                      createdByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                      deviceId: 'ab981a28-af69-486a-a03d-2f19a917a902'
+                                      deviceName: 'The BOSS Laser'
+                                      success: true
+                                      userFirstName: 'John'
+                                      userId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                      userLastName: 'Doe'
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /reports/userEdits:
+        get:
+            tags:
+                - reports
+            summary: Get a filterable log of user edits.
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1000'
+                - name: userId
+                  in: query
+                  schema:
+                      type: string
+                  example: 50586399-6050-487e-a9dc-a10053560fcd
+                - name: role
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userRole'
+                  example: admin
+                - name: status
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userStatus'
+                  example: active
+                - name: emergeAccessLevel
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userEmergeAccessLevel'
+                  example: full day access
+                - name: updatedByUserId
+                  in: query
+                  schema:
+                      type: string
+                  example: 50586399-6050-487e-a9dc-a10053560fcd
+                - name: startDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-28 16:00:00'
+                - name: endDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-29 15:00:00'
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        createdAt:
+                                            type: string
+                                        emergeAccessLevel:
+                                            $ref: '#/components/schemas/userEmergeAccessLevel'
+                                        role:
+                                            $ref: '#/components/schemas/userRole'
+                                        status:
+                                            $ref: '#/components/schemas/userStatus'
+                                        updatedByUserFirstName:
+                                            type: string
+                                        updatedByUserId:
+                                            type: string
+                                        updatedByUserLastName:
+                                            type: string
+                                        userFirstName:
+                                            type: string
+                                        userId:
+                                            type: string
+                                        userLastName:
+                                            type: string
+                                example:
+                                    - createdAt: '2024-01-15T15:38:32'
+                                      emergeAccessLevel: 'full day access'
+                                      role: 'user'
+                                      status: 'active'
+                                      updatedByUserFirstName: 'John'
+                                      updatedByUserId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                      updatedByUserLastName: 'Doe'
+                                      userFirstName: 'Andreane'
+                                      userId: '5755bd1a-b429-405a-aa0e-c8a2f9aac324'
+                                      userLastName: 'Walker'
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
+    /reports/userAccess:
+        get:
+            tags:
+                - reports
+            summary: Get a filterable log of user access (logins, logouts for now).
+            parameters:
+                - name: Content-Type
+                  in: header
+                  schema:
+                      $ref: '#/components/schemas/contentType'
+                  example: application/json
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1'
+                - name: perPage
+                  in: query
+                  schema:
+                      type: integer
+                  example: '1000'
+                - name: userId
+                  in: query
+                  schema:
+                      type: string
+                  example: 50586399-6050-487e-a9dc-a10053560fcd
+                - name: action
+                  in: query
+                  schema:
+                      $ref: '#/components/schemas/userAccessAction'
+                  example: login
+                - name: startDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-28 16:00:00'
+                - name: endDate
+                  in: query
+                  schema:
+                      type: string
+                  example: '2023-11-25 16:00:00'
+            responses:
+                '200':
+                    description: Successful response
+                    content:
+                        'application/json':
+                            schema:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        action:
+                                            $ref: '#/components/schemas/userAccessAction'
+                                        createdAt:
+                                            type: string
+                                        userFirstName:
+                                            type: string
+                                        userId:
+                                            type: string
+                                        userLastName:
+                                            type: string
+                                example:
+                                    - action: 'login'
+                                      createdAt: '2024-01-13T18:42:41'
+                                      userFirstName: 'John'
+                                      userId: '9996dbcc-5dd5-4b01-b601-bc157fbcb04e'
+                                      userLastName: 'Doe'
+                '500':
+                    $ref: '#/components/responses/unknownError'
+            security:
+                - bearerAuth: []
