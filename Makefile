@@ -27,7 +27,7 @@ run: checkenv
 	@echo "running any new database migrations"
 	flask db upgrade
 	@echo "running api server"
-	waitress-serve --host 127.0.0.1 app.app:app
+	waitress-serve --host 0.0.0.0 app.app:app
 
 dev: checkenv
 	@echo "running any new database migrations"
