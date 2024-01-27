@@ -1,3 +1,9 @@
+## v1.1.0
+
+2024-01-23
+
+-   Install and configure blank React UI for development and production
+
 ## v1.0.1
 
 2024-01-23
