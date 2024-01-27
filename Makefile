@@ -23,6 +23,10 @@ checkenv:
 	@[ "${VIRTUAL_ENV}" ] || ( echo error: environment not set, please run 'source env.sh'; exit 1 )
 	@[ "${GOT_API_SECRETS}" ] || ( echo error: secrets not set, please setup 'secrets.sh'; exit 1 )
 
+buildui: checkenv
+	@echo "creating static React production build"
+	cd ui && npm run build && cd ..
+
 run: checkenv
 	@echo "running any new database migrations"
 	flask db upgrade

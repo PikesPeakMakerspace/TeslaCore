@@ -20,7 +20,7 @@ Checkout the [OpenAPI documentation here](https://pikespeakmakerspace.github.io/
 
 ## Setup
 
-in a linux terminal clone and enter the directory with the source code
+In a linux terminal clone and enter the directory with the source code.
 
 ```
 cd TeslaCore
@@ -38,6 +38,8 @@ Install `venv`, a Python virtual environment to keep things clean and separate f
 apt install python3.10-venv
 ```
 
+Install Node.js 18 or higher.
+
 Install the required packages using the make target
 
 ```
@@ -52,36 +54,47 @@ nano secret.sh
 # Change the default to something else!
 ```
 
-Set system environment variables for the flask app and activate virtual environment
+## Run Development Server and UI
+
+Set system environment variables for the flask app and activate virtual environment.
 
 ```
 source env.sh
 ```
 
-Run the app for local development in debug mode using the make target
+Run the API server for local development
 
 ```
 make dev
 ```
 
-When running in production, use:
+Start React for development
+
+```
+cd ui
+npm run start
+```
+
+Wait for the browser to launch the UI.
+
+## Run Production Server and UI
+
+Set system environment variables for the flask app and activate virtual environment.
+
+```
+source env.sh
+```
+
+Build the React app to be delivered as static files by the API server.
+
+```
+make buildui
+```
+
+Run the production server.
 
 ```
 make run
-```
-
-## Repeated Setup
-
-Source the environment
-
-```
-source env.sh
-```
-
-Run the app for local development
-
-```
-make dev
 ```
 
 ## Making Database Structure Changes
