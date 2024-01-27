@@ -130,6 +130,10 @@ def connect_blueprints():
     from app.api.reports import reports as reports_blueprint
     app.register_blueprint(reports_blueprint)
 
+    # UI: static React production build
+    from app.ui import ui as ui_blueprint
+    app.register_blueprint(ui_blueprint)
+
 
 connect_blueprints()
 start_scheduled_tasks()

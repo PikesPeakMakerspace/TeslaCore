@@ -1,0 +1,7 @@
+running any new database migrations
+flask db upgrade
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+running api server
+waitress-serve --host 0.0.0.0 app.app:app
+INFO:waitress:Serving on http://0.0.0.0:8080
