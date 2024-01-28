@@ -25,7 +25,7 @@ checkenv:
 
 buildui: checkenv
 	@echo "creating static React production build"
-	cd ui && npm run build && cd ..
+	cd ui && npm i && npm run build cd ..
 
 run: checkenv
 	@echo "running any new database migrations"
