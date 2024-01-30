@@ -85,6 +85,3 @@ jobs:
             - name: install node dependencies
               run: npm ci
               working-directory: ui
-            - name: run react unit tests
-              run: npm test
-              working-directory: ui

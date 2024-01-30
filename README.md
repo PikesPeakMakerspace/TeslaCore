@@ -1,5 +1,7 @@
 # TESLA Core
 
+TESLA: Tools Enabled Safely and Library Access
+
 TESLA Core is a REST API and database designed to manage member equipment access via card scans at Pikes Peak Makerspace (and beyond?). It's intended to improve member safety while assisting with non-profit reporting needs.
 
 Card scans are made possible with TESLA access nodes (more on that soon) with the API used by the TESLA web app (more on that soon too).
