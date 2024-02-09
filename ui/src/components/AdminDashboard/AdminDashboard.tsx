@@ -10,11 +10,14 @@ import {
     Stack,
     Switch,
     TextField,
+    Typography,
 } from '@mui/material';
 
 const AdminDashboard = () => (
     <Box>
-        <h2>TESLA: Tools Enabled Safely and Library Access</h2>
+        <Typography variant="h5" component="h2">
+            TESLA: Tools Enabled Safely and Library Access
+        </Typography>
         <p>Heyo!</p>
         <Stack spacing={2} direction="row" sx={{ mb: 2 }}>
             <Button variant="text">Primary</Button>
