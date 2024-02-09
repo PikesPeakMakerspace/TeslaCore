@@ -1,9 +1,11 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 const Reports = () => (
     <Box>
-        <h2>Reports</h2>
+        <Typography variant="h5" component="h2">
+            Reports
+        </Typography>
         <p>Heyo!</p>
     </Box>
 );

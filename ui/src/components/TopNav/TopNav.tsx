@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useCallback, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -30,7 +30,6 @@ const pages: PageTitleUri[] = [
     { title: 'Access Nodes', uri: ['/accessNodes', 'accessNodes/:id'] },
     { title: 'Reports', uri: ['/reports', '/reports/:id'] },
 ];
-const settings = ['Logout'];
 
 // thanks: https://stackoverflow.com/a/7616484/1279000
 const profileImageHashUrl = (username: string): string => {
@@ -48,12 +47,8 @@ const profileImageHashUrl = (username: string): string => {
 };
 
 function TopNav() {
-    const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
-        null
-    );
-    const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(
-        null
-    );
+    const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
+    const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
 
     const theme = useTheme();
     const appContext = useAppContext();
@@ -87,6 +82,11 @@ function TopNav() {
         setAnchorElUser(null);
     };
 
+    const handleLogoutClick = useCallback(async () => {
+        appContext.appLogout();
+    }, [appContext]);
+
+    // get the current route so its active menu item can be highlighted
     const routeMatch = useRouteMatch(
         pages
             .map((page) => {
@@ -95,10 +95,6 @@ function TopNav() {
             .flat(1)
     );
     const currentTab = routeMatch?.pattern?.path;
-
-    const primaryTextColor =
-        theme.palette.mode === 'dark' ? 'primary' : 'rgba(255, 255, 255, 0.6)';
-    const selectedTextColor = theme.palette.mode === 'dark' ? 'white' : 'white';
 
     return (
         <AppBar position="static">
@@ -208,8 +204,8 @@ function TopNav() {
                                     px: 2,
                                     display: 'block',
                                     color: page.uri.includes(currentTab ?? '')
-                                        ? selectedTextColor
-                                        : primaryTextColor,
+                                        ? 'white'
+                                        : 'rgba(255, 255, 255, 0.6)',
                                 }}
                                 component={Link}
                                 to={page.uri[0]}
@@ -261,16 +257,16 @@ function TopNav() {
                             open={Boolean(anchorElUser)}
                             onClose={handleCloseUserMenu}
                         >
-                            {settings.map((setting) => (
-                                <MenuItem
-                                    key={setting}
-                                    onClick={handleCloseUserMenu}
-                                >
-                                    <Typography textAlign="center">
-                                        {setting}
-                                    </Typography>
-                                </MenuItem>
-                            ))}
+                            <MenuItem
+                                key="Logout"
+                                component={Link}
+                                to="/logout"
+                                onClick={handleLogoutClick}
+                            >
+                                <Typography textAlign="center">
+                                    Logout
+                                </Typography>
+                            </MenuItem>
                         </Menu>
                     </Box>
                 </Toolbar>

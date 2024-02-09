@@ -247,7 +247,7 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    access_token:
+                                    accessToken:
                                         type: string
                                     refreshToken:
                                         type: string
@@ -288,7 +288,7 @@ paths:
                                     accessToken:
                                         type: string
                                 example:
-                                    access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwNTI2MjQ2OSwianRpIjoiZTZhM2VmNjEtNmVjYy00Njk5LWEyMjctMDg5NGU4MGM4NTNkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6Ijk5OTZkYmNjLTVkZDUtNGIwMS1iNjAxLWJjMTU3ZmJjYjA0ZSIsIm5iZiI6MTcwNTI2MjQ2OSwiZXhwIjoxNzA1MjY2MDY5fQ.-dzWjnBVWpvPELxnayDc_prCWaPHjQsjGJcVWRdg8ok
+                                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcwNTI2MjQ2OSwianRpIjoiZTZhM2VmNjEtNmVjYy00Njk5LWEyMjctMDg5NGU4MGM4NTNkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6Ijk5OTZkYmNjLTVkZDUtNGIwMS1iNjAxLWJjMTU3ZmJjYjA0ZSIsIm5iZiI6MTcwNTI2MjQ2OSwiZXhwIjoxNzA1MjY2MDY5fQ.-dzWjnBVWpvPELxnayDc_prCWaPHjQsjGJcVWRdg8ok
             security:
                 - bearerAuth: []
     /auth/who-am-i:
