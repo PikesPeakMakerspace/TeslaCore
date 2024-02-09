@@ -1,9 +1,11 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 const AccessCards = () => (
     <Box>
-        <h2>Access Cards</h2>
+        <Typography variant="h5" component="h2">
+            Access Cards
+        </Typography>
         <p>Heyo!</p>
     </Box>
 );
