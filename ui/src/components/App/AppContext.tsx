@@ -96,8 +96,8 @@ export function AppContextProvider(props: AppContextProviderProps) {
     // Keep the access token fresh for continued website access.
     const updateAccessToken = useCallback(async (): Promise<void> => {
         // not logged in yet, no need to proceed
-        if (!accessToken.current) {
-            console.log('no token to refresh yet...');
+        if (!refreshToken.current) {
+            console.log('no refresh token to refresh with yet...');
             setLoading(false);
             setLoggedIn(false);
             return;
@@ -130,7 +130,6 @@ export function AppContextProvider(props: AppContextProviderProps) {
 
         accessToken.current = newAccessTokenResponse?.accessToken ?? '';
         lastTokenRefresh.current = Date.now();
-        saveToLocalStorage('accessToken', accessToken.current);
         setLoading(false);
         setLoggedIn(true);
     }, [loggedIn]);
@@ -149,16 +148,11 @@ export function AppContextProvider(props: AppContextProviderProps) {
         accessToken.current = loginResponse.accessToken;
         refreshToken.current = loginResponse.refreshToken;
         lastTokenRefresh.current = Date.now();
-        saveToLocalStorage('accessToken', loginResponse.accessToken);
         saveToLocalStorage('refreshToken', loginResponse.refreshToken);
         setLoggedIn(true);
     };
 
     const appLogout = async (): Promise<void | ServerError> => {
-        if (!accessToken.current) {
-            return;
-        }
-
         const logoutResponse = await logout(
             accessToken.current,
             refreshToken.current,
@@ -169,7 +163,6 @@ export function AppContextProvider(props: AppContextProviderProps) {
 
         accessToken.current = '';
         refreshToken.current = '';
-        saveToLocalStorage('accessToken', '');
         saveToLocalStorage('refreshToken', '');
         setLoggedIn(false);
 
@@ -193,10 +186,10 @@ export function AppContextProvider(props: AppContextProviderProps) {
 
     // get locally stored auth token data on load
     useEffect(() => {
-        accessToken.current = loadFromLocalStorage('accessToken') ?? '';
+        accessToken.current = '';
         refreshToken.current = loadFromLocalStorage('refreshToken') ?? '';
 
-        if (!accessToken.current || !refreshToken.current) {
+        if (!refreshToken.current) {
             setLoggedIn(false);
             setLoading(false);
             return;
