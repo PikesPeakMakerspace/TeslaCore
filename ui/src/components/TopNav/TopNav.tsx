@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -7,9 +7,7 @@ import Typography from '@mui/material/Typography';
 import Menu from '@mui/material/Menu';
 import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import ElectricalServicesIcon from '@mui/icons-material/ElectricalServices';
 import { Link, matchPath, useLocation } from 'react-router-dom';
@@ -17,6 +15,7 @@ import { useTheme } from '@mui/material/styles';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { useAppContext } from '../App/AppContext';
+import UserDropdownMenu from './UserDropdownMenu';
 
 interface PageTitleUri {
     title: string;
@@ -31,24 +30,8 @@ const pages: PageTitleUri[] = [
     { title: 'Reports', uri: ['/reports', '/reports/:id'] },
 ];
 
-// thanks: https://stackoverflow.com/a/7616484/1279000
-const profileImageHashUrl = (username: string): string => {
-    let hash = 0,
-        i,
-        chr;
-    for (i = 0; i < username.length; i++) {
-        chr = username.charCodeAt(i);
-        hash = (hash << 5) - hash + chr;
-        hash |= 0; // Convert to 32bit integer
-    }
-
-    const profileUrl = `https://gravatar.com/avatar/${hash}?d=retro&f=y`;
-    return profileUrl;
-};
-
 function TopNav() {
     const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
-    const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
 
     const theme = useTheme();
     const appContext = useAppContext();
@@ -70,21 +53,10 @@ function TopNav() {
     const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorElNav(event.currentTarget);
     };
-    const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorElUser(event.currentTarget);
-    };
 
     const handleCloseNavMenu = () => {
         setAnchorElNav(null);
     };
-
-    const handleCloseUserMenu = () => {
-        setAnchorElUser(null);
-    };
-
-    const handleLogoutClick = useCallback(async () => {
-        appContext.appLogout();
-    }, [appContext]);
 
     // get the current route so its active menu item can be highlighted
     const routeMatch = useRouteMatch(
@@ -229,46 +201,7 @@ function TopNav() {
                         </IconButton>
                     </Box>
 
-                    <Box sx={{ flexGrow: 0 }}>
-                        <Tooltip title="Open settings">
-                            <IconButton
-                                onClick={handleOpenUserMenu}
-                                sx={{ p: 0 }}
-                            >
-                                <Avatar
-                                    alt="Remy Sharp"
-                                    src={profileImageHashUrl('bob@example.com')}
-                                />
-                            </IconButton>
-                        </Tooltip>
-                        <Menu
-                            sx={{ mt: '45px' }}
-                            id="menu-appbar"
-                            anchorEl={anchorElUser}
-                            anchorOrigin={{
-                                vertical: 'top',
-                                horizontal: 'right',
-                            }}
-                            keepMounted
-                            transformOrigin={{
-                                vertical: 'top',
-                                horizontal: 'right',
-                            }}
-                            open={Boolean(anchorElUser)}
-                            onClose={handleCloseUserMenu}
-                        >
-                            <MenuItem
-                                key="Logout"
-                                component={Link}
-                                to="/logout"
-                                onClick={handleLogoutClick}
-                            >
-                                <Typography textAlign="center">
-                                    Logout
-                                </Typography>
-                            </MenuItem>
-                        </Menu>
-                    </Box>
+                    <UserDropdownMenu />
                 </Toolbar>
             </Container>
         </AppBar>
