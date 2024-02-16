@@ -7,12 +7,15 @@ export interface StatusMessageResponse {
     message: string;
 }
 
-export interface ApiRequestProps {
-    uri: string;
-    method: string;
+export interface AuthorizedRequestProps {
     accessToken: string;
     refreshToken: string;
     accessTokenRefreshCallback(newAccessToken: string): void;
+}
+
+export interface ApiRequestProps extends AuthorizedRequestProps {
+    uri: string;
+    method: string;
     requestBody?: any;
     contentType?: string;
 }
@@ -23,6 +26,13 @@ export interface RefreshAccessTokenResponse {
 
 export interface ServerError {
     errorMessage: string;
+}
+
+export interface WhoAmIResponse {
+    firstName: string;
+    id: string;
+    lastName: string;
+    username: string;
 }
 
 export const isServerError = (content: any): content is ServerError => {
@@ -119,7 +129,7 @@ export const apiRequest = async ({
             throw new Error(result?.message ?? response.statusText);
         }
 
-        return result.body;
+        return result;
     } catch (error) {
         console.error('login error:', error);
         return { errorMessage: (error as Error).message } as ServerError;
@@ -209,11 +219,11 @@ export const register = async (
     }
 };
 
-export const logout = async (
-    accessToken: string,
-    refreshToken: string,
-    accessTokenRefreshCallback: (newAccessToken: string) => void
-): Promise<StatusMessageResponse | ServerError> => {
+export const logout = async ({
+    accessToken,
+    refreshToken,
+    accessTokenRefreshCallback,
+}: AuthorizedRequestProps): Promise<StatusMessageResponse | ServerError> => {
     const requestBody = {
         refreshToken: refreshToken,
     };
@@ -237,11 +247,11 @@ export const logout = async (
     return logoutResponse;
 };
 
-export const loginValid = async (
-    accessToken: string,
-    refreshToken: string,
-    accessTokenRefreshCallback: (newAccessToken: string) => {}
-): Promise<boolean> => {
+export const loginValid = async ({
+    accessToken,
+    refreshToken,
+    accessTokenRefreshCallback,
+}: AuthorizedRequestProps): Promise<boolean> => {
     const response = await apiRequest({
         uri: '/api/auth/valid',
         method: 'GET',
@@ -252,11 +262,11 @@ export const loginValid = async (
     return isServerError(response) ? false : true;
 };
 
-export const whoAmI = async (
-    accessToken: string,
-    refreshToken: string,
-    accessTokenRefreshCallback: (newAccessToken: string) => {}
-): Promise<StatusMessageResponse | ServerError> => {
+export const whoAmI = async ({
+    accessToken,
+    refreshToken,
+    accessTokenRefreshCallback,
+}: AuthorizedRequestProps): Promise<WhoAmIResponse | ServerError> => {
     const response = await apiRequest({
         uri: '/api/auth/who-am-i',
         method: 'GET',

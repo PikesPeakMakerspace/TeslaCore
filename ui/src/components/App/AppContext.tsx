@@ -21,11 +21,17 @@ import {
 
 const REFRESH_INTERVAL_MILLISECONDS = 1800000; // 30 minutes
 
+export interface AppApiRequestProps {
+    requestFunction: (props: any) => Promise<any | ServerError>;
+    requestProps?: any;
+}
+
 export interface UseAppContext {
     theme?: Theme;
     toggleThemePaletteMode: () => void;
     appLogin: (username: string, password: string) => void;
     appLogout: () => void;
+    appApiRequest: (props: AppApiRequestProps) => Promise<any | ServerError>;
     loggedIn: boolean;
     loading: boolean;
 }
@@ -33,10 +39,14 @@ export interface AppContextProviderProps {
     children: ReactNode;
 }
 
+// TODO: This init placeholder smells funny. Seek professional help.
 const AppContext = React.createContext<UseAppContext>({
     toggleThemePaletteMode: () => {},
     appLogin: () => {},
     appLogout: () => {},
+    appApiRequest: (props) => {
+        return Promise.resolve();
+    },
     loggedIn: false,
     loading: false,
 });
@@ -96,8 +106,8 @@ export function AppContextProvider(props: AppContextProviderProps) {
     // Keep the access token fresh for continued website access.
     const updateAccessToken = useCallback(async (): Promise<void> => {
         // not logged in yet, no need to proceed
-        if (!accessToken.current) {
-            console.log('no token to refresh yet...');
+        if (!refreshToken.current) {
+            console.log('no refresh token to refresh with yet...');
             setLoading(false);
             setLoggedIn(false);
             return;
@@ -130,7 +140,6 @@ export function AppContextProvider(props: AppContextProviderProps) {
 
         accessToken.current = newAccessTokenResponse?.accessToken ?? '';
         lastTokenRefresh.current = Date.now();
-        saveToLocalStorage('accessToken', accessToken.current);
         setLoading(false);
         setLoggedIn(true);
     }, [loggedIn]);
@@ -149,35 +158,44 @@ export function AppContextProvider(props: AppContextProviderProps) {
         accessToken.current = loginResponse.accessToken;
         refreshToken.current = loginResponse.refreshToken;
         lastTokenRefresh.current = Date.now();
-        saveToLocalStorage('accessToken', loginResponse.accessToken);
         saveToLocalStorage('refreshToken', loginResponse.refreshToken);
         setLoggedIn(true);
     };
 
     const appLogout = async (): Promise<void | ServerError> => {
-        if (!accessToken.current) {
-            return;
-        }
-
-        const logoutResponse = await logout(
-            accessToken.current,
-            refreshToken.current,
-            (newAccessToken) => {
+        const logoutResponse = await logout({
+            accessToken: accessToken.current,
+            refreshToken: refreshToken.current,
+            accessTokenRefreshCallback: (newAccessToken) => {
                 accessToken.current = newAccessToken;
-            }
-        );
+            },
+        });
 
         accessToken.current = '';
         refreshToken.current = '';
-        saveToLocalStorage('accessToken', '');
         saveToLocalStorage('refreshToken', '');
         setLoggedIn(false);
 
         if (isServerError(logoutResponse)) {
             return logoutResponse as ServerError;
         }
+    };
 
-        return;
+    // Make an API request using access/refresh token kept here in context.
+    // TODO: I've seen examples of making token available everywhere via context, yet that feels scary hmm and this feels safer and simpler. Discuss with smarter people.
+    const appApiRequest = async ({
+        requestFunction,
+        requestProps,
+    }: AppApiRequestProps): Promise<any | ServerError> => {
+        if (!accessToken.current) {
+            return;
+        }
+        return await requestFunction({
+            accessToken: accessToken.current,
+            refreshToken: refreshToken.current,
+            accessTokenRefreshCallback: updateAccessToken,
+            ...requestProps,
+        });
     };
 
     // on load, set dark mode to stored dark mode, then system pref, then dark default
@@ -193,10 +211,12 @@ export function AppContextProvider(props: AppContextProviderProps) {
 
     // get locally stored auth token data on load
     useEffect(() => {
-        accessToken.current = loadFromLocalStorage('accessToken') ?? '';
+        accessToken.current = '';
         refreshToken.current = loadFromLocalStorage('refreshToken') ?? '';
+        lastTokenRefresh.current =
+            Date.now() - REFRESH_INTERVAL_MILLISECONDS - 10;
 
-        if (!accessToken.current || !refreshToken.current) {
+        if (!refreshToken.current) {
             setLoggedIn(false);
             setLoading(false);
             return;
@@ -221,6 +241,7 @@ export function AppContextProvider(props: AppContextProviderProps) {
                 toggleThemePaletteMode,
                 appLogin,
                 appLogout,
+                appApiRequest,
                 loggedIn,
                 loading,
             }}
