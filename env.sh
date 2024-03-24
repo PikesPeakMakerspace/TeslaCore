@@ -1,6 +1,6 @@
 export FLASK_APP=app/app.py
 export FLASK_DEBUG=1
-source auth/bin/activate
+source auth/Scripts/activate
 
 if [ -r secret.sh ]; then
     source secret.sh

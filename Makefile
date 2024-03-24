@@ -5,19 +5,19 @@
 .PHONY: all env checkenv run help
 
 VERSION := $(shell head -n 10 CHANGELOG.md | grep -Eo "[0-9\.]+" | head -n 1)
-PYTHON := python3
+PYTHON := python
 
 all: checkenv help
 
-auth/bin/activate:
+auth/Scripts/activate:
 	@echo "creating python venv 'auth'"
 	$(PYTHON) -m venv auth
-auth/.pip_installed: auth/bin/activate requirements.txt
+auth/.pip_installed: auth/Scripts/activate requirements.txt
 	@echo "installing python dependencies"
-	bash -c "source auth/bin/activate && $(PYTHON) -m pip install -r requirements.txt"
+	bash -c "source auth/Scripts/activate && $(PYTHON) -m pip install --require-virtualenv -r requirements.txt"
 	touch $@
 
-env: auth/bin/activate auth/.pip_installed env.sh
+env: auth/Scripts/activate auth/.pip_installed env.sh
 
 checkenv:
 	@[ "${VIRTUAL_ENV}" ] || ( echo error: environment not set, please run 'source env.sh'; exit 1 )
