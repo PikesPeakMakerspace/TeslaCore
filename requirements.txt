@@ -7,3 +7,5 @@ flask_jwt_extended
 pandas
 apscheduler
 waitress
+pymysql
+requests
